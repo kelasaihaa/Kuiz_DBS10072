@@ -1127,28 +1127,32 @@
             document.getElementById('final-score').innerText = `${score} pts`;
             document.getElementById('final-accuracy').innerText = `${correctAnswersCount} / ${total}`;
 
-            saveToLeaderboard(studentName, studentId, score, correctAnswersCount, total);
+            // Hantar ke Sheet DAHULU supaya penyimpanan berpusat tidak terjejas
+            // walaupun localStorage tidak tersedia (cth: mod peribadi/private).
             sendToGoogleSheet(studentName, studentId, score, correctAnswersCount, total, attemptDetail);
+            saveToLeaderboard(studentName, studentId, score, correctAnswersCount, total);
         }
 
         // Leaderboard tempatan: satu rekod satu matrik, simpan HANYA markah tertinggi.
         function saveToLeaderboard(name, id, score, correct, total) {
-            let leaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-            const idx = leaderboard.findIndex(e => (e.id || '').toUpperCase() === id.toUpperCase());
-            const entry = { name, id, score, correct, total, date: new Date().toLocaleDateString('ms-MY'), attempts: 1 };
-            if (idx === -1) {
-                leaderboard.push(entry);
-            } else {
-                const attempts = (leaderboard[idx].attempts || 1) + 1;
-                if (score > (leaderboard[idx].score || 0)) {
-                    entry.attempts = attempts;
-                    leaderboard[idx] = entry;
+            try {
+                let leaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
+                const idx = leaderboard.findIndex(e => (e.id || '').toUpperCase() === id.toUpperCase());
+                const entry = { name, id, score, correct, total, date: new Date().toLocaleDateString('ms-MY'), attempts: 1 };
+                if (idx === -1) {
+                    leaderboard.push(entry);
                 } else {
-                    leaderboard[idx].attempts = attempts;
+                    const attempts = (leaderboard[idx].attempts || 1) + 1;
+                    if (score > (leaderboard[idx].score || 0)) {
+                        entry.attempts = attempts;
+                        leaderboard[idx] = entry;
+                    } else {
+                        leaderboard[idx].attempts = attempts;
+                    }
                 }
-            }
-            leaderboard.sort((a, b) => b.score - a.score);
-            localStorage.setItem('quiz_leaderboard', JSON.stringify(leaderboard));
+                leaderboard.sort((a, b) => b.score - a.score);
+                localStorage.setItem('quiz_leaderboard', JSON.stringify(leaderboard));
+            } catch (e) { /* localStorage tidak tersedia — leaderboard berpusat (Sheet) kekal berfungsi */ }
         }
 
         // Hantar keputusan ke backend pensyarah (no-cors; padan dengan doPost Apps Script).
