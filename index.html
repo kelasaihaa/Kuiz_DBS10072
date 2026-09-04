@@ -40,9 +40,31 @@
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
         }
+        /* ==== Latar 3D + kesan interaktif ==== */
+        #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+        body { background: radial-gradient(1200px 800px at 50% -10%, #241b5e 0%, #14103a 45%, #070515 100%); }
+        #app { position: relative; z-index: 10; }
+        .tilt-card { transform-style: preserve-3d; will-change: transform; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .animate-fade-in { animation: fadeIn .35s ease both; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(.92); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-pop { animation: popIn .28s ease both; }
+        .opt-correct { background: rgba(16,185,129,.20) !important; border-color: #10b981 !important; }
+        .opt-wrong   { background: rgba(244,63,94,.18) !important; border-color: #f43f5e !important; }
+        .glow { box-shadow: 0 0 25px rgba(99,102,241,.35); }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+        }
     </style>
+    <!-- Three.js: latar 3D interaktif (zarah/atom) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- VanillaTilt: kesan kad 3D condong mengikut kursor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
 </head>
 <body class="text-slate-100 flex items-center justify-center p-3 sm:p-6 min-h-screen">
+
+    <!-- Latar 3D interaktif (Three.js) -->
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
     <div id="app" class="w-full max-w-3xl">
 
@@ -80,11 +102,13 @@
                     <div class="font-semibold text-indigo-300 flex items-center gap-2 mb-1">
                         <i class="fa-solid fa-circle-info"></i> Panduan Permainan:
                     </div>
-                    <p>• Terdapat <b>20 soalan</b> aneka pilihan (Topik 1 & Topik 2).</p>
-                    <p>• Soalan diacak (*shuffle*) secara rawak mengikut topik setiap kali bermula.</p>
+                    <p>• Terdapat <b>20 soalan</b> aneka pilihan (dipilih rawak: 10 Topik 1 + 10 Topik 2).</p>
+                    <p>• <b>Soalan &amp; pilihan jawapan diacak</b> setiap kali bermula.</p>
                     <p>• Masa menjawab bagi setiap soalan ialah <b>60 saat</b>.</p>
                     <p>• Jawapan betul: <b>1000 mata asas</b> + <b>10 mata bonus</b> bagi setiap baki saat.</p>
-                    <p>• Anda boleh membuka <b>Hint (Pembayang)</b> dan merujuk <b>AI Tutor</b> selepas menjawab.</p>
+                    <p>• Anda boleh <b>cuba berkali-kali</b> — <b>markah tertinggi</b> anda kekal di leaderboard.</p>
+                    <p>• Buka <b>Hint</b>, rujuk <b>AI Tutor</b>, dan <b>Semak Jawapan</b> selepas tamat.</p>
+                    <p>• Guna papan kekunci: <b>A–D</b> atau <b>1–4</b> untuk memilih, <b>Enter</b> untuk hantar.</p>
                 </div>
 
                 <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2">
@@ -99,6 +123,11 @@
                     <i class="fa-solid fa-trophy text-amber-400"></i>
                     <span>LIHAT PAPAN PENDAHULU (LEADERBOARD)</span>
                 </button>
+                <!-- Akses pensyarah (dashboard statistik) -->
+                <button onclick="openLecturerGate()" class="w-full mt-3 py-2.5 bg-slate-900/60 hover:bg-slate-800/80 text-xs font-semibold text-slate-400 hover:text-indigo-300 rounded-xl border border-slate-700/50 flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span>AKSES PENSYARAH</span>
+                </button>
             </div>
         </div>
 
@@ -106,7 +135,7 @@
         <div id="quiz-screen" class="hidden glass-card rounded-3xl p-5 sm:p-8 shadow-2xl relative">
             
             <!-- Quiz Top Header Bar -->
-            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-6">
                 <div>
                     <span id="topic-badge" class="px-3 py-1 bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold rounded-full">
                         Bahagian A
@@ -193,6 +222,10 @@
             </div>
 
             <div class="space-y-3">
+                <button onclick="showReview()" class="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>SEMAK JAWAPAN SAYA</span>
+                </button>
                 <button onclick="downloadCSVReport()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-file-arrow-down"></i>
                     <span>MUAT TURUN BUKTI KEPUTUSAN (CSV)</span>
@@ -206,6 +239,23 @@
                     <span>LIHAT LEADERBOARD</span>
                 </button>
             </div>
+        </div>
+
+        <!-- SCREEN 4: SEMAKAN JAWAPAN -->
+        <div id="review-screen" class="hidden glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-chart text-purple-400 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Semakan Jawapan</h3>
+                </div>
+                <button onclick="closeReview()" class="text-slate-400 hover:text-white p-1" aria-label="Tutup semakan">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="review-list" class="space-y-3 max-h-[65vh] overflow-y-auto custom-scrollbar pr-1"></div>
+            <button onclick="closeReview()" class="w-full mt-4 py-3 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-sm rounded-xl border border-slate-600/50 transition-all">
+                Kembali ke Keputusan
+            </button>
         </div>
 
     </div>
@@ -269,8 +319,8 @@
             </div>
 
             <div class="pt-4 border-t border-white/10 mt-4 flex justify-between items-center">
-                <button onclick="clearLeaderboard()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-trash"></i> Padam Rekod
+                <button onclick="requestClearLeaderboard()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-lock"></i> Padam Rekod (PIN)
                 </button>
                 <button onclick="toggleLeaderboardModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl">
                     Tutup
@@ -279,10 +329,71 @@
         </div>
     </div>
 
+    <!-- MODAL 3: GERBANG PIN PENSYARAH -->
+    <div id="pin-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-sm w-full rounded-3xl p-6 shadow-2xl border border-slate-700 animate-pop">
+            <div class="text-center mb-4">
+                <div class="inline-flex p-3 bg-indigo-600/30 rounded-2xl mb-3 border border-indigo-400/30">
+                    <i class="fa-solid fa-lock text-2xl text-indigo-300"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Akses Pensyarah</h3>
+                <p class="text-xs text-slate-400 mt-1">Masukkan PIN untuk meneruskan.</p>
+            </div>
+            <label for="pin-input" class="sr-only">PIN Pensyarah</label>
+            <input type="password" id="pin-input" autocomplete="off" placeholder="PIN Pensyarah"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();submitPin();}"
+                class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 px-4 text-slate-100 text-sm text-center tracking-widest focus:outline-none focus:border-indigo-500">
+            <p id="pin-error" class="hidden text-xs text-rose-400 text-center mt-2"><i class="fa-solid fa-triangle-exclamation"></i> PIN salah. Cuba lagi.</p>
+            <div class="flex gap-2 mt-4">
+                <button onclick="closePin()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 rounded-xl">Batal</button>
+                <button onclick="submitPin()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl">Sahkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: DASHBOARD PENSYARAH -->
+    <div id="dashboard-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-2xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700 max-h-[88vh] flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Dashboard Pensyarah</h3>
+                </div>
+                <button onclick="closeDashboard()" class="text-slate-400 hover:text-white p-1" aria-label="Tutup dashboard"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="dashboard-body" class="flex-1 overflow-y-auto custom-scrollbar pr-1 text-sm text-slate-200">
+                <div class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan statistik kelas...</div>
+            </div>
+            <div class="pt-4 border-t border-white/10 mt-4 flex justify-between items-center gap-2">
+                <button onclick="requestClearLeaderboard()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-trash"></i> Padam Leaderboard
+                </button>
+                <button onclick="closeDashboard()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // --- TETAPKAN URL GOOGLE APPS SCRIPT PENSYARAH DI SINI ---
-        // Masukkan URL Google Apps Script Web App anda di dalam pengenalan bawah:
-        const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmTKq6RCxaxFQixojVGbAG8_huMSQyzLwWTZpd12oXobNdq049uohoG_YsKnu5DH91/exec";
+        // ================= TETAPAN KUIZ (boleh diubah oleh pensyarah) =================
+        // BACKEND_URL: URL Web App Google Apps Script (lihat fail backend/Code.gs).
+        // SEMUA fungsi (simpan keputusan, leaderboard berpusat, statistik, AI Tutor)
+        // melalui backend ini supaya API key TIDAK PERNAH terdedah kepada umum.
+        const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxmTKq6RCxaxFQixojVGbAG8_huMSQyzLwWTZpd12oXobNdq049uohoG_YsKnu5DH91/exec";
+
+        const QUIZ_CONFIG = {
+            perTopic: 10,        // bilangan soalan dipilih secara rawak bagi setiap topik
+            timePerQuestion: 60, // saat bagi setiap soalan
+            basePoints: 1000,    // mata asas bagi jawapan betul
+            bonusPerSecond: 10   // mata bonus bagi setiap baki saat
+        };
+
+        // Gerbang PIN pensyarah — HANYA cincang (hash) disimpan di sini, BUKAN kata laluan.
+        // (SHA-256 bergaram; kata laluan sebenar tidak pernah muncul dalam kod ini.)
+        const PIN_SALT = "DBS10072::";
+        const PIN_HASH = "8d8330113ffded4db574d3f51ad36b68b4c253cec73ef57ba1192fdbbfb068eb";
+
+        // Serasi ke belakang dengan nama pemboleh ubah lama.
+        const GOOGLE_SHEET_SCRIPT_URL = BACKEND_URL;
 
         // --- MASTER DATA SOALAN (20 SOALAN) ---
         const rawQuizData = [
@@ -534,7 +645,7 @@
                 },
                 answer: "C",
                 hint: "Fikirkan secara logik pergerakan kaki anda. Jika anda berlari pecut (memecut), langkah kaki anda akan menjadi semakin jauh dan renggang berbanding semasa anda berjalan santai. Jarak bertambah = Objek semakin laju!",
-                rationale: "<b>Jawapan Betul: C</b><br><br><b>Penerangan:</b> Jangka masa detik mengetuk pada selang masa yang sentiasa sama ($0.02\\text{ s}$ bagi setiap detik).<br>Apabila jarak antara titik bertambah (semakin renggang), ini menunjukkan jarak yang dilalui oleh troli dalam masa $0.02\\text{ s}$ tersebut menjadi semakin panjang daripada sela sebelumnya.<br>Perubahan ini menunjukkan halaju objek meningkat dari masa ke masa, yang bermaksud objek sedang mengalami <b>Pecutan Seragam</b> (pilihan C).<br><br>💡 <i>Tips Menjawab:</i> Jarak sekata = Halaju seragam (A). Jarak semakin rapat = Nyahpecutan (B). Jarak semakin renggang = Pecutan (C)!"
+                rationale: "<b>Jawapan Betul: C</b><br><br><b>Penerangan:</b> Jangka masa detik mengetuk pada selang masa yang sentiasa sama ($0.02\\text{ s}$ bagi setiap detik).<br>Apabila jarak antara titik bertambah (semakin renggang), ini menunjukkan jarak yang dilalui oleh troli dalam masa $0.02\\text{ s}$ tersebut menjadi semakin panjang daripada sela sebelumnya.<br>Perubahan ini menunjukkan halaju objek meningkat dari masa ke masa, yang bermaksud objek sedang mengalami <b>Pecutan Seragam</b>.<br><br>💡 <i>Tips Menjawab:</i> Jarak sekata = Halaju seragam. Jarak semakin rapat = Nyahpecutan. Jarak semakin renggang = Pecutan!"
             },
             {
                 topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
@@ -548,11 +659,145 @@
                 answer: "C",
                 hint: "Selesaikan mengikut langkah: 1) Halaju awal $u = x_1 / t_{\\text{strip}}$, 2) Halaju akhir $v = x_5 / t_{\\text{strip}}$, 3) Masa selang $t = (N-1) \\times t_{\\text{strip}} = 4 \\times 0.2\\text{ s} = 0.8\\text{ s}$, 4) Pecutan $a = (v - u)/t$.",
                 rationale: "<b>Jawapan Betul: C</b><br><br><b>Penerangan:</b><br>• Halaju awal ($u$): $$u = \\frac{2.0\\text{ cm}}{0.2\\text{ s}} = 10\\text{ cm/s}$$<br>• Halaju akhir ($v$): $$v = \\frac{10.0\\text{ cm}}{0.2\\text{ s}} = 50\\text{ cm/s}$$<br>• Masa keseluruhan pecutan ($t$): $$t = (N - 1) \\times t_{\\text{strip}} = (5 - 1) \\times 0.2\\text{ s} = 0.8\\text{ s}$$<br>• Pecutan ($a$): $$a = \\frac{v - u}{t} = \\frac{50 - 10}{0.8} = \\frac{40}{0.8} = 50\\text{ cm/s}^2$$<br><br>💡 <i>Tips Menjawab:</i> Kesilapan paling kerap ialah guna $t = 5 \\times 0.2 = 1.0\\text{ s}$. Ingat! Masa pecutan dari jalur pertama ke jalur kelima sentiasa $(N - 1) \\times t_{\\text{strip}}$."
+            },
+
+            // ===== BANK SOALAN TAMBAHAN — Topik 1.0 =====
+            {
+                topic: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)",
+                question: "What is the SI base unit for electric current?<br><span class='text-xs text-indigo-200 italic mt-1 block'>Apakah unit asas SI bagi arus elektrik?</span>",
+                options: {
+                    A: { en: "Volt (V)", ms: "Volt (V)" },
+                    B: { en: "Ampere (A)", ms: "Ampere (A)" },
+                    C: { en: "Coulomb (C)", ms: "Coulomb (C)" },
+                    D: { en: "Ohm (Ω)", ms: "Ohm (Ω)" }
+                },
+                answer: "B",
+                hint: "Arus elektrik ialah salah satu daripada 7 kuantiti asas SI; unitnya dinamakan sempena Ampère.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b> Arus elektrik ialah kuantiti asas SI dan unit asasnya ialah <b>Ampere (A)</b>. Volt, Coulomb dan Ohm ialah unit terbitan.<br><br>💡 <i>Tips Menjawab:</i> 7 kuantiti asas: panjang, jisim, masa, arus, suhu, kuantiti bahan, keamatan cahaya!"
+            },
+            {
+                topic: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)",
+                question: "Convert 2.5 km into metres.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Tukarkan 2.5 km kepada meter.</span>",
+                options: {
+                    A: { en: "25 m", ms: "25 m" },
+                    B: { en: "250 m", ms: "250 m" },
+                    C: { en: "2,500 m", ms: "2,500 m" },
+                    D: { en: "25,000 m", ms: "25,000 m" }
+                },
+                answer: "C",
+                hint: "1 km = 1,000 m. Maka darabkan dengan 1,000.",
+                rationale: "<b>Jawapan Betul: C</b><br><br><b>Penerangan:</b><br>$$2.5\\text{ km} \\times 1{,}000 = 2{,}500\\text{ m}$$<br><br>💡 <i>Tips Menjawab:</i> 'kilo' bermaksud 1,000!"
+            },
+            {
+                topic: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)",
+                question: "The prefix 'milli' (m) represents which factor?<br><span class='text-xs text-indigo-200 italic mt-1 block'>Awalan 'milli' (m) mewakili faktor yang manakah?</span>",
+                options: {
+                    A: { en: "10⁻³", ms: "10⁻³" },
+                    B: { en: "10⁻⁶", ms: "10⁻⁶" },
+                    C: { en: "10³", ms: "10³" },
+                    D: { en: "10⁻²", ms: "10⁻²" }
+                },
+                answer: "A",
+                hint: "milli bermaksud satu per seribu.",
+                rationale: "<b>Jawapan Betul: A</b><br><br><b>Penerangan:</b> Awalan <b>milli</b> = satu per seribu = $10^{-3}$ (cth: 1 mm = $10^{-3}$ m).<br><br>💡 <i>Tips Menjawab:</i> milli ($10^{-3}$), mikro ($10^{-6}$), kilo ($10^{3}$), senti ($10^{-2}$)."
+            },
+            {
+                topic: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)",
+                question: "Which of the following is a DERIVED unit?<br><span class='text-xs text-indigo-200 italic mt-1 block'>Antara berikut, yang manakah merupakan unit TERBITAN?</span>",
+                options: {
+                    A: { en: "Kilogram (kg)", ms: "Kilogram (kg)" },
+                    B: { en: "Metre per second squared (m/s²)", ms: "Meter per saat kuasa dua (m/s²)" },
+                    C: { en: "Second (s)", ms: "Saat (s)" },
+                    D: { en: "Ampere (A)", ms: "Ampere (A)" }
+                },
+                answer: "B",
+                hint: "Unit terbitan terhasil daripada gabungan unit asas (cth: panjang ÷ masa²).",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b> $\\text{m/s}^2$ terhasil daripada unit asas panjang (m) dan masa (s), jadi ia <b>unit terbitan</b>. Kilogram, saat dan ampere ialah unit asas.<br><br>💡 <i>Tips Menjawab:</i> Ada operasi darab/bahagi antara unit = Terbitan!"
+            },
+            {
+                topic: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)",
+                question: "Convert 3,000 g into kilograms.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Tukarkan 3,000 g kepada kilogram.</span>",
+                options: {
+                    A: { en: "0.3 kg", ms: "0.3 kg" },
+                    B: { en: "3 kg", ms: "3 kg" },
+                    C: { en: "30 kg", ms: "30 kg" },
+                    D: { en: "300 kg", ms: "300 kg" }
+                },
+                answer: "B",
+                hint: "1 kg = 1,000 g, jadi bahagikan dengan 1,000.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b><br>$$\\frac{3{,}000\\text{ g}}{1{,}000} = 3\\text{ kg}$$<br><br>💡 <i>Tips Menjawab:</i> Gram ke kilogram: bahagi 1,000!"
+            },
+
+            // ===== BANK SOALAN TAMBAHAN — Topik 2.0 =====
+            {
+                topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
+                question: "A machine part accelerates uniformly from 10 m/s to 30 m/s in 5 seconds. Calculate its acceleration.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Satu komponen mesin memecut secara seragam dari 10 m/s ke 30 m/s dalam 5 saat. Kirakan pecutannya.</span>",
+                options: {
+                    A: { en: "2 m/s²", ms: "2 m/s²" },
+                    B: { en: "4 m/s²", ms: "4 m/s²" },
+                    C: { en: "5 m/s²", ms: "5 m/s²" },
+                    D: { en: "8 m/s²", ms: "8 m/s²" }
+                },
+                answer: "B",
+                hint: "Pecutan $a = (v - u) / t$.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b><br>$$a = \\frac{v - u}{t} = \\frac{30 - 10}{5} = 4\\text{ m/s}^2$$<br><br>💡 <i>Tips Menjawab:</i> Pecutan = perubahan halaju ÷ masa!"
+            },
+            {
+                topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
+                question: "An object moves at a constant velocity of 15 m/s for 8 seconds. Calculate the distance travelled.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Satu objek bergerak pada halaju malar 15 m/s selama 8 saat. Kirakan jarak yang dilalui.</span>",
+                options: {
+                    A: { en: "60 m", ms: "60 m" },
+                    B: { en: "108 m", ms: "108 m" },
+                    C: { en: "120 m", ms: "120 m" },
+                    D: { en: "150 m", ms: "150 m" }
+                },
+                answer: "C",
+                hint: "Halaju malar: jarak $s = v \\times t$.",
+                rationale: "<b>Jawapan Betul: C</b><br><br><b>Penerangan:</b><br>$$s = v \\times t = 15 \\times 8 = 120\\text{ m}$$<br><br>💡 <i>Tips Menjawab:</i> Halaju malar bermakna tiada pecutan, jadi jarak = laju × masa!"
+            },
+            {
+                topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
+                question: "A trolley travels 100 m in 20 seconds. Calculate its average speed.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Sebuah troli bergerak sejauh 100 m dalam 20 saat. Kirakan laju puratanya.</span>",
+                options: {
+                    A: { en: "2 m/s", ms: "2 m/s" },
+                    B: { en: "5 m/s", ms: "5 m/s" },
+                    C: { en: "20 m/s", ms: "20 m/s" },
+                    D: { en: "80 m/s", ms: "80 m/s" }
+                },
+                answer: "B",
+                hint: "Laju purata = jumlah jarak ÷ jumlah masa.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b><br>$$\\text{Laju purata} = \\frac{\\text{jarak}}{\\text{masa}} = \\frac{100}{20} = 5\\text{ m/s}$$<br><br>💡 <i>Tips Menjawab:</i> Laju menggunakan jarak (skalar), halaju menggunakan sesaran (vektor)!"
+            },
+            {
+                topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
+                question: "A body starts moving at 5 m/s and accelerates uniformly at 3 m/s² for 4 seconds. Find its final velocity.<br><span class='text-xs text-indigo-200 italic mt-1 block'>Satu jasad mula bergerak pada 5 m/s dan memecut seragam pada 3 m/s² selama 4 saat. Cari halaju akhirnya.</span>",
+                options: {
+                    A: { en: "12 m/s", ms: "12 m/s" },
+                    B: { en: "17 m/s", ms: "17 m/s" },
+                    C: { en: "20 m/s", ms: "20 m/s" },
+                    D: { en: "32 m/s", ms: "32 m/s" }
+                },
+                answer: "B",
+                hint: "Gunakan $v = u + at$ dengan $u = 5$, $a = 3$, $t = 4$.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b><br>$$v = u + at = 5 + (3 \\times 4) = 17\\text{ m/s}$$<br><br>💡 <i>Tips Menjawab:</i> 'mula bergerak pada 5 m/s' bermakna $u = 5$, bukan 0!"
+            },
+            {
+                topic: "Bahagian B: Topik 2.0 (Gerakan Linear)",
+                question: "A ticker timer operates at a frequency of 50 Hz. What is the total time taken for 5 ticks?<br><span class='text-xs text-indigo-200 italic mt-1 block'>Sebuah jangka masa detik berfungsi pada frekuensi 50 Hz. Berapakah jumlah masa bagi 5 detik?</span>",
+                options: {
+                    A: { en: "0.02 s", ms: "0.02 s" },
+                    B: { en: "0.10 s", ms: "0.10 s" },
+                    C: { en: "0.25 s", ms: "0.25 s" },
+                    D: { en: "0.50 s", ms: "0.50 s" }
+                },
+                answer: "B",
+                hint: "Masa 1 detik = 1/50 = 0.02 s. Maka 5 detik = 5 × 0.02 s.",
+                rationale: "<b>Jawapan Betul: B</b><br><br><b>Penerangan:</b><br>$$T_1 = \\frac{1}{50} = 0.02\\text{ s} \\Rightarrow 5 \\times 0.02 = 0.10\\text{ s}$$<br><br>💡 <i>Tips Menjawab:</i> 1 detik = 0.02 s pada 50 Hz!"
             }
         ];
 
         // --- STATE VARIABLES ---
-        let currentQuizData = []; 
+        let currentQuizData = [];
         let currentQuestionIndex = 0;
         let selectedOption = null;
         let score = 0;
@@ -561,6 +806,19 @@
         let studentId = "";
         let timerInterval = null;
         let timeLeft = 60;
+        let questionStartTime = 0;   // untuk analitik masa per soalan
+        let attemptDetail = [];      // [{qid,label,correct,time}] -> analitik & payload
+        let reviewData = [];         // untuk skrin semakan jawapan
+        let pendingPinAction = null; // tindakan menunggu selepas PIN disahkan
+        let audioCtx = null;         // kesan bunyi (dibuat atas interaksi pengguna)
+
+        // Tunjuk satu skrin, sembunyikan yang lain.
+        function showScreen(id) {
+            ['registration-screen', 'quiz-screen', 'result-screen', 'review-screen'].forEach(s => {
+                const el = document.getElementById(s);
+                if (el) el.classList.toggle('hidden', s !== id);
+            });
+        }
 
         function shuffleArray(array) {
             const arr = [...array];
@@ -571,14 +829,32 @@
             return arr;
         }
 
+        // Bina soalan dengan pilihan yang telah DIKOCOK, sambil menjejaki jawapan betul.
+        function buildQuestion(raw) {
+            const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+            const entries = shuffleArray(Object.keys(raw.options).map(k => ({
+                en: raw.options[k].en,
+                ms: raw.options[k].ms,
+                correct: (k === raw.answer)
+            })));
+            const shuffledOptions = entries.map((e, i) => ({
+                key: letters[i], en: e.en, ms: e.ms, correct: e.correct
+            }));
+            const correctOpt = shuffledOptions.find(o => o.correct) || {};
+            return Object.assign({}, raw, {
+                shuffledOptions: shuffledOptions,
+                correctKey: correctOpt.key,
+                correctText: correctOpt.en
+            });
+        }
+
+        // Pilih subset rawak bagi setiap topik, kemudian kocok pilihan setiap soalan.
         function generateShuffledQuizData() {
-            const topic1Questions = rawQuizData.filter(q => q.topic.includes('Topik 1.0'));
-            const topic2Questions = rawQuizData.filter(q => q.topic.includes('Topik 2.0'));
-
-            const shuffledTopic1 = shuffleArray(topic1Questions);
-            const shuffledTopic2 = shuffleArray(topic2Questions);
-
-            return [...shuffledTopic1, ...shuffledTopic2];
+            const pick = (topicKey) => {
+                const pool = rawQuizData.filter(q => q.topic.includes(topicKey));
+                return shuffleArray(pool).slice(0, Math.min(QUIZ_CONFIG.perTopic, pool.length));
+            };
+            return [...pick('Topik 1.0'), ...pick('Topik 2.0')].map(buildQuestion);
         }
 
         function renderMath() {
@@ -594,63 +870,60 @@
         }
 
         function startQuiz(event) {
-            event.preventDefault();
+            if (event) event.preventDefault();
             studentName = document.getElementById('student-name').value.trim();
             studentId = document.getElementById('student-id').value.trim().toUpperCase();
-
             if (!studentName || !studentId) return;
 
             currentQuizData = generateShuffledQuizData();
-
-            document.getElementById('registration-screen').classList.add('hidden');
-            document.getElementById('quiz-screen').classList.remove('hidden');
-            document.getElementById('student-display').innerText = `${studentName} (${studentId})`;
-
             currentQuestionIndex = 0;
             score = 0;
             correctAnswersCount = 0;
-            
+            attemptDetail = [];
+            reviewData = [];
+
+            showScreen('quiz-screen');
+            document.getElementById('student-display').innerText = `${studentName} (${studentId})`;
             loadQuestion();
         }
 
         function loadQuestion() {
             clearInterval(timerInterval);
             selectedOption = null;
-            timeLeft = 60;
+            timeLeft = QUIZ_CONFIG.timePerQuestion;
+            questionStartTime = Date.now();
 
             const q = currentQuizData[currentQuestionIndex];
+            const total = currentQuizData.length;
 
             document.getElementById('topic-badge').innerText = q.topic;
-            document.getElementById('question-count').innerText = `SOALAN ${currentQuestionIndex + 1} / ${currentQuizData.length}`;
+            document.getElementById('question-count').innerText = `SOALAN ${currentQuestionIndex + 1} / ${total}`;
             document.getElementById('score-text').innerText = `${score} pts`;
-            
-            const progress = ((currentQuestionIndex) / currentQuizData.length) * 100;
-            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / total) * 100}%`;
 
             document.getElementById('hint-box').classList.add('hidden');
             document.getElementById('hint-text').innerHTML = q.hint;
             document.getElementById('question-text').innerHTML = q.question;
 
             const optionsContainer = document.getElementById('options-container');
+            optionsContainer.setAttribute('role', 'radiogroup');
             optionsContainer.innerHTML = '';
 
-            Object.keys(q.options).forEach(key => {
-                const opt = q.options[key];
+            q.shuffledOptions.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.onclick = () => selectOption(key);
-                btn.id = `opt-${key}`;
-                btn.className = "w-full p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 text-left transition-all duration-200 flex items-start gap-3 group";
-
+                btn.onclick = () => selectOption(opt.key);
+                btn.id = `opt-${opt.key}`;
+                btn.setAttribute('role', 'radio');
+                btn.setAttribute('aria-checked', 'false');
+                btn.setAttribute('aria-label', `Pilihan ${opt.key}: ${opt.en}`);
+                btn.className = "opt-btn w-full p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 text-left transition-all duration-200 flex items-start gap-3 group focus:outline-none focus:ring-2 focus:ring-indigo-500";
                 btn.innerHTML = `
-                    <div id="badge-${key}" class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-600 flex items-center justify-center font-bold text-xs text-indigo-300 group-hover:border-indigo-400 shrink-0 mt-0.5">
-                        ${key}
-                    </div>
+                    <div id="badge-${opt.key}" class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-600 flex items-center justify-center font-bold text-xs text-indigo-300 group-hover:border-indigo-400 shrink-0 mt-0.5">${opt.key}</div>
                     <div class="flex-1">
                         <div class="text-xs sm:text-sm font-semibold text-slate-100">${opt.en}</div>
                         <div class="text-xs text-indigo-200/80 italic mt-0.5 font-normal">${opt.ms}</div>
-                    </div>
-                `;
+                    </div>`;
                 optionsContainer.appendChild(btn);
             });
 
@@ -658,6 +931,7 @@
             submitBtn.disabled = true;
             submitBtn.className = "w-full sm:w-auto px-8 py-3.5 bg-indigo-600/40 text-slate-400 font-bold text-sm rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-not-allowed";
 
+            persistProgress();
             startTimer();
             renderMath();
         }
@@ -667,7 +941,6 @@
             timerInterval = setInterval(() => {
                 timeLeft--;
                 updateTimerDisplay();
-
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     autoSubmitTimeout();
@@ -678,9 +951,7 @@
         function updateTimerDisplay() {
             const timerText = document.getElementById('timer-text');
             const timerIcon = document.getElementById('timer-icon');
-
             timerText.innerText = `${timeLeft}s`;
-
             if (timeLeft <= 10) {
                 timerText.className = "text-lg font-mono font-bold pulse-timer";
                 timerIcon.className = "fa-solid fa-stopwatch text-rose-500 animate-bounce";
@@ -692,20 +963,21 @@
 
         function selectOption(key) {
             selectedOption = key;
-            
-            ['A', 'B', 'C', 'D'].forEach(k => {
-                const btn = document.getElementById(`opt-${k}`);
-                const badge = document.getElementById(`badge-${k}`);
-
-                if (k === key) {
-                    btn.className = "w-full p-4 rounded-2xl bg-indigo-900/50 border-2 border-indigo-500 text-left transition-all duration-200 flex items-start gap-3 shadow-lg shadow-indigo-950/50";
+            const q = currentQuizData[currentQuestionIndex];
+            q.shuffledOptions.forEach(opt => {
+                const btn = document.getElementById(`opt-${opt.key}`);
+                const badge = document.getElementById(`badge-${opt.key}`);
+                if (!btn) return;
+                if (opt.key === key) {
+                    btn.className = "opt-btn w-full p-4 rounded-2xl bg-indigo-900/50 border-2 border-indigo-500 text-left transition-all duration-200 flex items-start gap-3 shadow-lg shadow-indigo-950/50 focus:outline-none focus:ring-2 focus:ring-indigo-500";
                     badge.className = "w-8 h-8 rounded-xl bg-indigo-600 border border-indigo-400 flex items-center justify-center font-bold text-xs text-white shrink-0 mt-0.5";
+                    btn.setAttribute('aria-checked', 'true');
                 } else {
-                    btn.className = "w-full p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 text-left transition-all duration-200 flex items-start gap-3 group opacity-70";
+                    btn.className = "opt-btn w-full p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 text-left transition-all duration-200 flex items-start gap-3 group opacity-70 focus:outline-none focus:ring-2 focus:ring-indigo-500";
                     badge.className = "w-8 h-8 rounded-xl bg-slate-800 border border-slate-600 flex items-center justify-center font-bold text-xs text-indigo-300 shrink-0 mt-0.5";
+                    btn.setAttribute('aria-checked', 'false');
                 }
             });
-
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = false;
             submitBtn.className = "w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer";
@@ -718,22 +990,41 @@
         function submitAnswer() {
             if (!selectedOption) return;
             clearInterval(timerInterval);
-
             const q = currentQuizData[currentQuestionIndex];
-            const isCorrect = selectedOption === q.answer;
+            const isCorrect = selectedOption === q.correctKey;
+            const timeUsed = Math.max(0, Math.round((Date.now() - questionStartTime) / 1000));
 
             if (isCorrect) {
-                const bonusPoints = timeLeft * 10;
-                const questionScore = 1000 + bonusPoints;
-                score += questionScore;
+                score += QUIZ_CONFIG.basePoints + (timeLeft * QUIZ_CONFIG.bonusPerSecond);
                 correctAnswersCount++;
             }
-
+            recordAnswer(q, selectedOption, isCorrect, timeUsed);
             showFeedbackModal(isCorrect, false);
         }
 
         function autoSubmitTimeout() {
+            const q = currentQuizData[currentQuestionIndex];
+            recordAnswer(q, null, false, QUIZ_CONFIG.timePerQuestion);
             showFeedbackModal(false, true);
+        }
+
+        // Rekod jawapan untuk analitik (masa/betul) & skrin semakan.
+        function recordAnswer(q, chosenKey, isCorrect, timeUsed) {
+            attemptDetail.push({ qid: q.qid, label: q.label, correct: isCorrect, time: timeUsed });
+            const chosen = q.shuffledOptions.find(o => o.key === chosenKey);
+            reviewData.push({
+                question: q.question,
+                chosen: chosen ? `${chosen.key}. ${chosen.en}` : 'Tiada (masa tamat)',
+                correctText: `${q.correctKey}. ${q.correctText}`,
+                isCorrect: isCorrect,
+                rationale: fixRationaleLetter(q)
+            });
+            playSound(isCorrect);
+        }
+
+        // Selaraskan huruf "Jawapan Betul: X" dalam rationale dengan pilihan yang telah dikocok.
+        function fixRationaleLetter(q) {
+            return (q.rationale || '').replace(/Jawapan Betul:\s*[A-F]/, 'Jawapan Betul: ' + q.correctKey);
         }
 
         function showFeedbackModal(isCorrect, isTimeout) {
@@ -748,7 +1039,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-rose-400">MASA TAMAT!</h3>
-                        <p class="text-xs text-slate-400">Anda tidak sempat menghantar jawapan dalam 60 saat.</p>
+                        <p class="text-xs text-slate-400">Anda tidak sempat menjawab dalam ${QUIZ_CONFIG.timePerQuestion} saat. Jawapan betul: <b>${q.correctKey}</b>.</p>
                     </div>
                 `;
             } else if (isCorrect) {
@@ -758,7 +1049,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-emerald-400">TAHNIAH! JAWAPAN BETUL</h3>
-                        <p class="text-xs text-emerald-200/80">+1000 Mata Asas | +${timeLeft * 10} Mata Bonus Masa (${timeLeft}s)</p>
+                        <p class="text-xs text-emerald-200/80">+${QUIZ_CONFIG.basePoints} Mata Asas | +${timeLeft * QUIZ_CONFIG.bonusPerSecond} Mata Bonus Masa (${timeLeft}s)</p>
                     </div>
                 `;
             } else {
@@ -768,12 +1059,12 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-rose-400">MAAF, JAWAPAN KURANG TEPAT</h3>
-                        <p class="text-xs text-slate-400">Jawapan pilihan anda: <b>${selectedOption || '-'}</b> | Jawapan Betul: <b>${q.answer}</b></p>
+                        <p class="text-xs text-slate-400">Jawapan pilihan anda: <b>${selectedOption || '-'}</b> | Jawapan Betul: <b>${q.correctKey}</b></p>
                     </div>
                 `;
             }
 
-            body.innerHTML = q.rationale;
+            body.innerHTML = fixRationaleLetter(q);
 
             document.getElementById('ai-loading').classList.add('hidden');
             document.getElementById('ai-response').classList.add('hidden');
@@ -784,6 +1075,7 @@
             renderMath();
         }
 
+        // AI Tutor melalui backend selamat (API key kekal di server, tidak terdedah).
         async function askAITutor() {
             const q = currentQuizData[currentQuestionIndex];
             const aiBtn = document.getElementById('ai-btn');
@@ -794,42 +1086,30 @@
             aiLoading.classList.remove('hidden');
             aiResponse.classList.add('hidden');
 
-            const prompt = `
-            Anda ialah AI Tutor Fizik Sains untuk kursus diploma politeknik (DBS10072 Science).
-            Soalan: ${q.question}
-            Pilihan Pilihan Pelajar: ${selectedOption || 'Masa Tamat (Tiada Jawapan)'}
-            Jawapan Betul: ${q.answer}
-            
-            Sila berikan penerangan yang sangat mudah dipahami, mesra pelajar, ringkas (maksimum 3-4 ayat), dan berikan 1 tip praktikal untuk ingat konsep ini semasa peperiksaan. Gunakan Bahasa Melayu.
-            `;
+            const plainQ = q.question.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const url = `${BACKEND_URL}?action=ai&q=${encodeURIComponent(plainQ)}&sel=${encodeURIComponent(selectedOption || '')}&ans=${encodeURIComponent(q.correctText || q.correctKey || '')}`;
 
             try {
-                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-
-                const data = await response.json();
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, AI Tutor tidak dapat memproses permintaan ketika ini.";
-
+                const res = await fetch(url);
+                const data = await res.json();
                 aiLoading.classList.add('hidden');
                 aiResponse.classList.remove('hidden');
-                aiResponse.innerHTML = aiText.replace(/\n/g, '<br>');
+                if (data && data.ok && data.text) {
+                    aiResponse.innerHTML = data.text.replace(/\n/g, '<br>');
+                } else {
+                    aiResponse.innerHTML = `<span class="text-amber-300"><i class="fa-solid fa-triangle-exclamation"></i> AI Tutor belum tersedia. Pastikan pensyarah telah memasang backend (Code.gs) & menetapkan GEMINI_KEY.</span>`;
+                }
                 renderMath();
             } catch (err) {
                 aiLoading.classList.add('hidden');
                 aiResponse.classList.remove('hidden');
-                aiResponse.innerHTML = "Gagal berhubung dengan AI Tutor. Sila pastikan sambungan internet anda stabil.";
+                aiResponse.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i> Gagal berhubung dengan AI Tutor. Semak sambungan internet atau tetapan backend.</span>`;
             }
         }
 
         function nextQuestion() {
             document.getElementById('feedback-modal').classList.add('hidden');
             currentQuestionIndex++;
-
             if (currentQuestionIndex < currentQuizData.length) {
                 loadQuestion();
             } else {
@@ -838,136 +1118,404 @@
         }
 
         function finishQuiz() {
-            document.getElementById('quiz-screen').classList.add('hidden');
-            document.getElementById('result-screen').classList.remove('hidden');
+            clearInterval(timerInterval);
+            clearProgress();
+            const total = currentQuizData.length;
 
+            showScreen('result-screen');
             document.getElementById('result-student-info').innerText = `${studentName} (${studentId})`;
             document.getElementById('final-score').innerText = `${score} pts`;
-            document.getElementById('final-accuracy').innerText = `${correctAnswersCount} / ${currentQuizData.length}`;
+            document.getElementById('final-accuracy').innerText = `${correctAnswersCount} / ${total}`;
 
-            saveToLeaderboard(studentName, studentId, score, correctAnswersCount);
-            sendToGoogleSheet(studentName, studentId, score, correctAnswersCount, rawQuizData.length);
+            saveToLeaderboard(studentName, studentId, score, correctAnswersCount, total);
+            sendToGoogleSheet(studentName, studentId, score, correctAnswersCount, total, attemptDetail);
         }
 
-        // Simpan ke LocalStorage
-        function saveToLeaderboard(name, id, score, correct) {
+        // Leaderboard tempatan: satu rekod satu matrik, simpan HANYA markah tertinggi.
+        function saveToLeaderboard(name, id, score, correct, total) {
             let leaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-            
-            leaderboard.push({
-                name: name,
-                id: id,
-                score: score,
-                correct: correct,
-                date: new Date().toLocaleDateString('ms-MY')
-            });
-
+            const idx = leaderboard.findIndex(e => (e.id || '').toUpperCase() === id.toUpperCase());
+            const entry = { name, id, score, correct, total, date: new Date().toLocaleDateString('ms-MY'), attempts: 1 };
+            if (idx === -1) {
+                leaderboard.push(entry);
+            } else {
+                const attempts = (leaderboard[idx].attempts || 1) + 1;
+                if (score > (leaderboard[idx].score || 0)) {
+                    entry.attempts = attempts;
+                    leaderboard[idx] = entry;
+                } else {
+                    leaderboard[idx].attempts = attempts;
+                }
+            }
             leaderboard.sort((a, b) => b.score - a.score);
             localStorage.setItem('quiz_leaderboard', JSON.stringify(leaderboard));
         }
 
-        // Hantar Data Keputusan Secara Berpusat ke Google Sheets Pensyarah
-        async function sendToGoogleSheet(name, id, score, correct, total) {
+        // Hantar keputusan ke backend pensyarah (no-cors; padan dengan doPost Apps Script).
+        async function sendToGoogleSheet(name, id, score, correct, total, detail) {
             const statusDiv = document.getElementById('cloud-sync-status');
-
-            if (!GOOGLE_SHEET_SCRIPT_URL || GOOGLE_SHEET_SCRIPT_URL.includes("MASUKKAN_URL")) {
-                statusDiv.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Mod Tempatan (Google Sheet URL belum dikonfigurasi oleh pensyarah).</span>`;
+            if (!BACKEND_URL || BACKEND_URL.includes("MASUKKAN_URL")) {
+                statusDiv.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Mod Tempatan (URL backend belum dikonfigurasi oleh pensyarah).</span>`;
                 return;
             }
-
             statusDiv.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Menghantar keputusan ke pangkalan data pensyarah...`;
-
             try {
-                const payload = {
-                    name: name,
-                    id: id,
-                    score: score,
-                    correct: correct,
-                    total: total,
-                    date: new Date().toLocaleString('ms-MY')
-                };
-
-                await fetch(GOOGLE_SHEET_SCRIPT_URL, {
+                const payload = { name, id, score, correct, total, detail: detail || [], date: new Date().toLocaleString('ms-MY') };
+                await fetch(BACKEND_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Mencegah isu CORS Google Apps Script
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-
-                statusDiv.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Keputusan berjaya dihantar ke Google Sheets Pensyarah!</span>`;
+                statusDiv.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Keputusan berjaya dihantar ke pangkalan data pensyarah!</span>`;
             } catch (error) {
-                statusDiv.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i> Gagal menghantar ke cloud. Sila muat turun fail CSV bukti.</span>`;
+                statusDiv.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i> Gagal menghantar ke cloud. Sila muat turun fail CSV sebagai bukti.</span>`;
             }
         }
 
-        // Fungsi Muat Turun Bukti Laporan CSV oleh Pelajar
+        // Neutralkan input supaya selamat daripada 'formula injection' dalam Excel/Sheets.
+        function csvSafe(val) {
+            let s = String(val == null ? '' : val);
+            if (/^[=\+\-@]/.test(s)) s = "'" + s;
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
         function downloadCSVReport() {
-            const dateStr = new Date().toLocaleDateString('ms-MY');
-            const csvContent = "data:text/csv;charset=utf-8," 
-                + "Nama Pelajar,No Matrik,Jumlah Mata,Betul,Jumlah Soalan,Tarikh\n"
-                + `"${studentName}","${studentId}",${score},${correctAnswersCount},${rawQuizData.length},"${dateStr}"`;
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Laporan_Kuiz_${studentId}.csv`);
+            const dateStr = new Date().toLocaleString('ms-MY');
+            const total = currentQuizData.length || (QUIZ_CONFIG.perTopic * 2);
+            const rows = [
+                ['Nama Pelajar', 'No Matrik', 'Jumlah Mata', 'Betul', 'Jumlah Soalan', 'Tarikh'],
+                [studentName, studentId, score, correctAnswersCount, total, dateStr]
+            ];
+            const csv = rows.map(r => r.map(csvSafe).join(',')).join('\r\n');
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }); // BOM utk Excel
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Laporan_Kuiz_${(studentId || 'pelajar').replace(/[^A-Za-z0-9_-]/g, '')}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
         }
 
-        function toggleLeaderboardModal() {
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // ---- Leaderboard: cuba data berpusat (server), jika gagal guna data tempatan ----
+        async function toggleLeaderboardModal() {
             const modal = document.getElementById('leaderboard-modal');
+            if (!modal.classList.contains('hidden')) { modal.classList.add('hidden'); return; }
             const list = document.getElementById('leaderboard-list');
+            list.innerHTML = `<div class="text-center text-xs text-slate-400 py-6"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan...</div>`;
+            modal.classList.remove('hidden');
+            let data = await fetchServerLeaderboard();
+            let source = 'server';
+            if (!data) { data = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]'); source = 'local'; }
+            renderLeaderboard(data, source);
+        }
+        async function fetchServerLeaderboard() {
+            if (!BACKEND_URL) return null;
+            try {
+                const res = await fetch(`${BACKEND_URL}?action=leaderboard`);
+                const json = await res.json();
+                if (json && json.ok && Array.isArray(json.leaderboard)) return json.leaderboard;
+                return null;
+            } catch (e) { return null; }
+        }
+        function renderLeaderboard(leaderboard, source) {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+            const srcBadge = document.createElement('div');
+            srcBadge.className = 'text-[10px] text-slate-500 text-center mb-2';
+            srcBadge.innerHTML = source === 'server'
+                ? '<i class="fa-solid fa-cloud"></i> Data berpusat (semua pelajar)'
+                : '<i class="fa-solid fa-laptop"></i> Data peranti ini sahaja (backend tidak dapat dihubungi)';
+            list.appendChild(srcBadge);
+            if (!leaderboard || leaderboard.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'text-center text-xs text-slate-400 py-8';
+                empty.innerText = 'Belum ada rekod dalam Leaderboard.';
+                list.appendChild(empty);
+                return;
+            }
+            leaderboard.forEach((item, index) => {
+                const rankColor = index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500';
+                const badgeBg = index === 0 ? 'bg-amber-500/20 border-amber-500/40' : 'bg-slate-900/60 border-slate-700/80';
+                const total = item.total || (QUIZ_CONFIG.perTopic * 2);
+                const attempts = item.attempts ? ` • ${item.attempts}x cubaan` : '';
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-2xl ${badgeBg} border flex items-center justify-between text-xs`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-sm ${rankColor} w-6 text-center">#${index + 1}</span>
+                        <div>
+                            <div class="font-bold text-slate-100">${escapeHtml(item.name)}</div>
+                            <div class="text-[10px] text-indigo-300 font-mono">${escapeHtml(item.id)}${attempts}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-extrabold text-emerald-400">${item.score} pts</div>
+                        <div class="text-[10px] text-slate-400">${item.correct}/${total} Betul</div>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
 
-            if (modal.classList.contains('hidden')) {
-                let leaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-                list.innerHTML = '';
-
-                if (leaderboard.length === 0) {
-                    list.innerHTML = `<div class="text-center text-xs text-slate-400 py-8">Belum ada rekod dalam Leaderboard.</div>`;
-                } else {
-                    leaderboard.forEach((item, index) => {
-                        const rankColor = index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500';
-                        const badgeBg = index === 0 ? 'bg-amber-500/20 border-amber-500/40' : 'bg-slate-900/60 border-slate-700/80';
-
-                        const div = document.createElement('div');
-                        div.className = `p-3 rounded-2xl ${badgeBg} border flex items-center justify-between text-xs`;
-                        div.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <span class="font-bold text-sm ${rankColor} w-6 text-center">#${index + 1}</span>
-                                <div>
-                                    <div class="font-bold text-slate-100">${item.name}</div>
-                                    <div class="text-[10px] text-indigo-300 font-mono">${item.id} • ${item.date}</div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-extrabold text-emerald-400">${item.score} pts</div>
-                                <div class="text-[10px] text-slate-400">${item.correct}/${rawQuizData.length} Betul</div>
-                            </div>
-                        `;
-                        list.appendChild(div);
-                    });
-                }
-                modal.classList.remove('hidden');
+        // ---- Gerbang PIN pensyarah (hanya cincang dibandingkan; kata laluan tidak disimpan) ----
+        async function sha256Hex(str) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        function openPin(action) {
+            pendingPinAction = action;
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-error').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('pin-input').focus(), 50);
+        }
+        function closePin() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            pendingPinAction = null;
+        }
+        async function submitPin() {
+            const val = document.getElementById('pin-input').value;
+            const hash = await sha256Hex(PIN_SALT + val);
+            if (hash === PIN_HASH) {
+                const action = pendingPinAction;
+                closePin();
+                if (typeof action === 'function') action();
             } else {
-                modal.classList.add('hidden');
+                document.getElementById('pin-error').classList.remove('hidden');
             }
+        }
+        function openLecturerGate() { openPin(openDashboard); }
+        function requestClearLeaderboard() { openPin(doClearLeaderboard); }
+        function doClearLeaderboard() {
+            localStorage.removeItem('quiz_leaderboard');
+            const lbList = document.getElementById('leaderboard-list');
+            if (lbList && !document.getElementById('leaderboard-modal').classList.contains('hidden')) renderLeaderboard([], 'local');
+            alert('Rekod leaderboard tempatan telah dipadam.\n(Nota: data berpusat dalam Google Sheet perlu dipadam manual oleh pensyarah.)');
         }
 
-        function clearLeaderboard() {
-            if (confirm("Adakah anda pasti untuk memadam semua rekod Leaderboard?")) {
-                localStorage.removeItem('quiz_leaderboard');
-                toggleLeaderboardModal();
-            }
+        // ---- Dashboard pensyarah (statistik kelas) ----
+        async function openDashboard() {
+            document.getElementById('dashboard-modal').classList.remove('hidden');
+            const body = document.getElementById('dashboard-body');
+            body.innerHTML = `<div class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan statistik kelas...</div>`;
+            let stats = null;
+            try {
+                const res = await fetch(`${BACKEND_URL}?action=stats`);
+                const json = await res.json();
+                if (json && json.ok) stats = json.stats;
+            } catch (e) {}
+            if (!stats) { renderDashboardLocal(); return; }
+            renderDashboard(stats);
         }
+        function closeDashboard() { document.getElementById('dashboard-modal').classList.add('hidden'); }
+        function statCard(label, val) {
+            return `<div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-3 text-center">
+                <div class="text-xl font-extrabold text-emerald-400">${(val === undefined || val === null) ? '-' : val}</div>
+                <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">${label}</div>
+            </div>`;
+        }
+        function renderDashboard(s) {
+            const body = document.getElementById('dashboard-body');
+            const cards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                ${statCard('Cubaan', s.attempts)}${statCard('Pelajar', s.students)}${statCard('Purata Mata', s.avgScore)}${statCard('Purata Betul', s.avgCorrect)}
+            </div>`;
+            let table = '<div class="text-slate-400 text-xs py-4">Tiada data soalan lagi.</div>';
+            if (s.perQuestion && s.perQuestion.length) {
+                table = `<h4 class="text-sm font-bold text-white mb-2"><i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Soalan Paling Kerap Salah</h4>
+                    <div class="space-y-2">` +
+                    s.perQuestion.slice(0, 12).map(q => `
+                        <div class="bg-slate-900/60 border border-slate-700/60 rounded-xl p-3">
+                            <div class="flex justify-between items-center text-xs mb-1">
+                                <span class="text-slate-200 font-semibold pr-2">${escapeHtml(q.label)}</span>
+                                <span class="text-rose-400 font-bold shrink-0">${q.missRate}% salah</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5"><div class="bg-rose-500 h-1.5 rounded-full" style="width:${q.missRate}%"></div></div>
+                            <div class="text-[10px] text-slate-500 mt-1">${q.seen} jawapan • purata masa ${q.avgTime}s</div>
+                        </div>`).join('') + `</div>`;
+            }
+            body.innerHTML = cards + table;
+        }
+        function renderDashboardLocal() {
+            const body = document.getElementById('dashboard-body');
+            const lb = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
+            const attempts = lb.reduce((a, e) => a + (e.attempts || 1), 0);
+            const avg = lb.length ? Math.round(lb.reduce((a, e) => a + (e.score || 0), 0) / lb.length) : 0;
+            body.innerHTML = `<div class="text-[11px] text-amber-300 mb-3"><i class="fa-solid fa-circle-info"></i> Backend tidak dapat dihubungi — memaparkan data peranti ini sahaja. Pasang backend/Code.gs untuk statistik kelas penuh.</div>
+                <div class="grid grid-cols-3 gap-3">${statCard('Pelajar (peranti)', lb.length)}${statCard('Cubaan', attempts)}${statCard('Purata Mata', avg)}</div>`;
+        }
+
+        // ---- Skrin semakan jawapan ----
+        function showReview() {
+            const list = document.getElementById('review-list');
+            list.innerHTML = '';
+            reviewData.forEach((r, i) => {
+                const color = r.isCorrect ? 'border-emerald-500/40' : 'border-rose-500/40';
+                const icon = r.isCorrect ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' : '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+                const div = document.createElement('div');
+                div.className = `bg-slate-900/50 border ${color} rounded-2xl p-4`;
+                div.innerHTML = `
+                    <div class="flex items-start gap-2 mb-2">
+                        <span class="text-xs font-bold text-indigo-300 shrink-0">S${i + 1}</span>
+                        <div class="text-xs sm:text-sm font-semibold text-slate-100">${r.question}</div>
+                    </div>
+                    <div class="text-xs space-y-1 pl-6">
+                        <div>${icon} Jawapan anda: <b class="${r.isCorrect ? 'text-emerald-300' : 'text-rose-300'}">${escapeHtml(r.chosen)}</b></div>
+                        ${r.isCorrect ? '' : `<div><i class="fa-solid fa-key text-amber-400"></i> Jawapan betul: <b class="text-emerald-300">${escapeHtml(r.correctText)}</b></div>`}
+                        <details class="mt-1"><summary class="cursor-pointer text-indigo-300 text-[11px]">Lihat penerangan</summary><div class="mt-2 text-slate-300 leading-relaxed">${r.rationale}</div></details>
+                    </div>`;
+                list.appendChild(div);
+            });
+            showScreen('review-screen');
+            renderMath();
+        }
+        function closeReview() { showScreen('result-screen'); }
 
         function restartQuiz() {
-            document.getElementById('result-screen').classList.add('hidden');
-            document.getElementById('registration-screen').classList.remove('hidden');
+            clearProgress();
+            showScreen('registration-screen');
+        }
+
+        // ---- Kesan bunyi ringkas (Web Audio) ----
+        function playSound(isCorrect) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                o.frequency.value = isCorrect ? 880 : 220;
+                g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+                o.start();
+                o.stop(audioCtx.currentTime + 0.36);
+            } catch (e) { /* senyap jika tidak disokong */ }
+        }
+
+        // ---- Simpan & sambung semula kemajuan ----
+        function persistProgress() {
+            try {
+                localStorage.setItem('quiz_inprogress', JSON.stringify({
+                    studentName, studentId, currentQuestionIndex, score, correctAnswersCount,
+                    attemptDetail, reviewData, quiz: currentQuizData, ts: Date.now()
+                }));
+            } catch (e) {}
+        }
+        function clearProgress() { try { localStorage.removeItem('quiz_inprogress'); } catch (e) {} }
+        function maybeResume() {
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem('quiz_inprogress') || 'null'); } catch (e) {}
+            if (!saved || !saved.quiz || !saved.quiz.length) return;
+            if (saved.currentQuestionIndex >= saved.quiz.length) { clearProgress(); return; }
+            if (!confirm(`Terdapat kuiz belum selesai untuk ${saved.studentName || 'pelajar'}. Sambung semula?`)) { clearProgress(); return; }
+            studentName = saved.studentName; studentId = saved.studentId;
+            currentQuizData = saved.quiz; currentQuestionIndex = saved.currentQuestionIndex;
+            score = saved.score || 0; correctAnswersCount = saved.correctAnswersCount || 0;
+            attemptDetail = saved.attemptDetail || []; reviewData = saved.reviewData || [];
+            showScreen('quiz-screen');
+            document.getElementById('student-display').innerText = `${studentName} (${studentId})`;
+            loadQuestion();
+        }
+
+        // ---- Latar 3D interaktif (Three.js): medan zarah + atom berputar ----
+        function init3DBackground() {
+            if (typeof THREE === 'undefined') return;
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const canvas = document.getElementById('bg-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 60;
+
+            const count = 900;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 200;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.7, color: 0x8b5cf6, transparent: true, opacity: 0.8 }));
+            scene.add(points);
+
+            const rings = [];
+            const ringColors = [0x6366f1, 0xec4899, 0x22d3ee];
+            for (let i = 0; i < 3; i++) {
+                const t = new THREE.Mesh(new THREE.TorusGeometry(10 + i * 4, 0.25, 12, 80),
+                    new THREE.MeshBasicMaterial({ color: ringColors[i], transparent: true, opacity: 0.5 }));
+                t.rotation.x = Math.random() * Math.PI;
+                t.rotation.y = Math.random() * Math.PI;
+                scene.add(t); rings.push(t);
+            }
+
+            let mx = 0, my = 0;
+            window.addEventListener('pointermove', (e) => {
+                mx = (e.clientX / window.innerWidth - 0.5);
+                my = (e.clientY / window.innerHeight - 0.5);
+            });
+            function onResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight, false);
+            }
+            window.addEventListener('resize', onResize);
+            onResize();
+
+            (function animate() {
+                requestAnimationFrame(animate);
+                points.rotation.y += 0.0008;
+                points.rotation.x += 0.0003;
+                rings.forEach((r, i) => { r.rotation.x += 0.004 + i * 0.001; r.rotation.y += 0.006; });
+                camera.position.x += (mx * 20 - camera.position.x) * 0.03;
+                camera.position.y += (-my * 20 - camera.position.y) * 0.03;
+                camera.lookAt(scene.position);
+                renderer.render(scene, camera);
+            })();
+        }
+        function initTilt() {
+            if (typeof VanillaTilt !== 'undefined' &&
+                !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+                VanillaTilt.init(document.querySelectorAll('#registration-screen'), { max: 4, speed: 400, glare: true, 'max-glare': 0.12, scale: 1.01 });
+            }
         }
 
         window.onload = function() {
+            // ID stabil + label ringkas bagi setiap soalan (untuk analitik).
+            rawQuizData.forEach((q, i) => {
+                q.qid = 'Q' + (i + 1);
+                const plain = q.question.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                q.label = 'S' + (i + 1) + ': ' + plain.slice(0, 46);
+            });
+
             renderMath();
+            init3DBackground();
+            initTilt();
+
+            // Amaran sebelum meninggalkan halaman semasa kuiz berjalan.
+            window.addEventListener('beforeunload', (e) => {
+                if (!document.getElementById('quiz-screen').classList.contains('hidden')) {
+                    e.preventDefault(); e.returnValue = '';
+                }
+            });
+
+            // Sokongan papan kekunci: A-D / 1-4 untuk pilih, Enter untuk hantar / soalan seterusnya.
+            document.addEventListener('keydown', (e) => {
+                const quizActive = !document.getElementById('quiz-screen').classList.contains('hidden');
+                const feedbackOpen = !document.getElementById('feedback-modal').classList.contains('hidden');
+                if (feedbackOpen && e.key === 'Enter') { nextQuestion(); return; }
+                if (!quizActive || feedbackOpen) return;
+                const q = currentQuizData[currentQuestionIndex];
+                if (!q) return;
+                let key = null;
+                if (/^[a-dA-D]$/.test(e.key)) key = e.key.toUpperCase();
+                else if (/^[1-4]$/.test(e.key)) key = ['A', 'B', 'C', 'D'][parseInt(e.key, 10) - 1];
+                if (key && q.shuffledOptions.some(o => o.key === key)) selectOption(key);
+                else if (e.key === 'Enter' && !document.getElementById('submit-btn').disabled) submitAnswer();
+            });
+
+            maybeResume();
         };
     </script>
 </body>
