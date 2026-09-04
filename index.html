@@ -72,7 +72,7 @@
                     <label class="block text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-2">Nombor Pendaftaran / Matrik</label>
                     <div class="relative">
                         <i class="fa-solid fa-id-card absolute left-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="student-id" required placeholder="Contoh: P03DEIxxFxxx" class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 pl-11 pr-4 text-slate-100 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 uppercase">
+                        <input type="text" id="student-id" required placeholder="Contoh: 07DMS23F1001" class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 pl-11 pr-4 text-slate-100 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 uppercase">
                     </div>
                 </div>
 
@@ -174,7 +174,12 @@
                 <i class="fa-solid fa-trophy text-5xl"></i>
             </div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-1">Tahniah! Kuiz Selesai</h2>
-            <p id="result-student-info" class="text-xs text-indigo-200 mb-6"></p>
+            <p id="result-student-info" class="text-xs text-indigo-200 mb-2"></p>
+            
+            <!-- Status Penghantaran Data Google Sheet -->
+            <div id="cloud-sync-status" class="text-xs text-indigo-300 mb-6 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-spinner animate-spin"></i> Menyimpan keputusan ke pangkalan data pensyarah...
+            </div>
 
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-4">
@@ -188,6 +193,10 @@
             </div>
 
             <div class="space-y-3">
+                <button onclick="downloadCSVReport()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <span>MUAT TURUN BUKTI KEPUTUSAN (CSV)</span>
+                </button>
                 <button onclick="restartQuiz()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-rotate-right"></i>
                     <span>CUBA LAGI (RESTART)</span>
@@ -271,6 +280,10 @@
     </div>
 
     <script>
+        // --- TETAPKAN URL GOOGLE APPS SCRIPT PENSYARAH DI SINI ---
+        // Masukkan URL Google Apps Script Web App anda di dalam pengenalan bawah:
+        const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEsGZRaiDILqxgzbxjAyho1iKEO5kFWDmMteksutnlR6PgpiO-Jlu4jT60DKhJYuh_/exec";
+
         // --- MASTER DATA SOALAN (20 SOALAN) ---
         const rawQuizData = [
             // PART A: TOPIC 1.0 (Q1 - Q10)
@@ -539,7 +552,7 @@
         ];
 
         // --- STATE VARIABLES ---
-        let currentQuizData = []; // Hold the active shuffled questions for the session
+        let currentQuizData = []; 
         let currentQuestionIndex = 0;
         let selectedOption = null;
         let score = 0;
@@ -549,7 +562,6 @@
         let timerInterval = null;
         let timeLeft = 60;
 
-        // Fisher-Yates Shuffle Function
         function shuffleArray(array) {
             const arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {
@@ -559,7 +571,6 @@
             return arr;
         }
 
-        // Prepare Shuffled Questions (Topic 1 shuffled internally, Topic 2 shuffled internally)
         function generateShuffledQuizData() {
             const topic1Questions = rawQuizData.filter(q => q.topic.includes('Topik 1.0'));
             const topic2Questions = rawQuizData.filter(q => q.topic.includes('Topik 2.0'));
@@ -567,11 +578,9 @@
             const shuffledTopic1 = shuffleArray(topic1Questions);
             const shuffledTopic2 = shuffleArray(topic2Questions);
 
-            // Combine Topik 1 (Shuffled) + Topik 2 (Shuffled)
             return [...shuffledTopic1, ...shuffledTopic2];
         }
 
-        // Render Math equations via KaTeX
         function renderMath() {
             setTimeout(() => {
                 renderMathInElement(document.body, {
@@ -584,7 +593,6 @@
             }, 50);
         }
 
-        // Start Quiz Action
         function startQuiz(event) {
             event.preventDefault();
             studentName = document.getElementById('student-name').value.trim();
@@ -592,7 +600,6 @@
 
             if (!studentName || !studentId) return;
 
-            // Generate fresh shuffled question list per login session
             currentQuizData = generateShuffledQuizData();
 
             document.getElementById('registration-screen').classList.add('hidden');
@@ -606,7 +613,6 @@
             loadQuestion();
         }
 
-        // Load Question Data into Screen
         function loadQuestion() {
             clearInterval(timerInterval);
             selectedOption = null;
@@ -614,7 +620,6 @@
 
             const q = currentQuizData[currentQuestionIndex];
 
-            // Update UI Header
             document.getElementById('topic-badge').innerText = q.topic;
             document.getElementById('question-count').innerText = `SOALAN ${currentQuestionIndex + 1} / ${currentQuizData.length}`;
             document.getElementById('score-text').innerText = `${score} pts`;
@@ -622,14 +627,10 @@
             const progress = ((currentQuestionIndex) / currentQuizData.length) * 100;
             document.getElementById('progress-bar').style.width = `${progress}%`;
 
-            // Reset Hint Box
             document.getElementById('hint-box').classList.add('hidden');
             document.getElementById('hint-text').innerHTML = q.hint;
-
-            // Render Question Text
             document.getElementById('question-text').innerHTML = q.question;
 
-            // Render Options (Bilingual Format: English top, Bahasa Malaysia italic bottom)
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
 
@@ -653,17 +654,14 @@
                 optionsContainer.appendChild(btn);
             });
 
-            // Disable Submit Button initially
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = true;
             submitBtn.className = "w-full sm:w-auto px-8 py-3.5 bg-indigo-600/40 text-slate-400 font-bold text-sm rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-not-allowed";
 
-            // Start Timer
             startTimer();
             renderMath();
         }
 
-        // Timer Logic
         function startTimer() {
             updateTimerDisplay();
             timerInterval = setInterval(() => {
@@ -692,7 +690,6 @@
             }
         }
 
-        // Option Selection
         function selectOption(key) {
             selectedOption = key;
             
@@ -714,13 +711,10 @@
             submitBtn.className = "w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer";
         }
 
-        // Toggle Hint Box
         function toggleHint() {
-            const hintBox = document.getElementById('hint-box');
-            hintBox.classList.toggle('hidden');
+            document.getElementById('hint-box').classList.toggle('hidden');
         }
 
-        // Submit Answer Action
         function submitAnswer() {
             if (!selectedOption) return;
             clearInterval(timerInterval);
@@ -738,12 +732,10 @@
             showFeedbackModal(isCorrect, false);
         }
 
-        // Auto Submit when Time Expires
         function autoSubmitTimeout() {
             showFeedbackModal(false, true);
         }
 
-        // Show Feedback Modal
         function showFeedbackModal(isCorrect, isTimeout) {
             const q = currentQuizData[currentQuestionIndex];
             const header = document.getElementById('feedback-header');
@@ -783,7 +775,6 @@
 
             body.innerHTML = q.rationale;
 
-            // Reset AI Tutor Box
             document.getElementById('ai-loading').classList.add('hidden');
             document.getElementById('ai-response').classList.add('hidden');
             document.getElementById('ai-response').innerHTML = '';
@@ -793,7 +784,6 @@
             renderMath();
         }
 
-        // Ask AI Tutor Integration via Gemini API
         async function askAITutor() {
             const q = currentQuizData[currentQuestionIndex];
             const aiBtn = document.getElementById('ai-btn');
@@ -836,7 +826,6 @@
             }
         }
 
-        // Next Question or Finish Quiz
         function nextQuestion() {
             document.getElementById('feedback-modal').classList.add('hidden');
             currentQuestionIndex++;
@@ -848,7 +837,6 @@
             }
         }
 
-        // Finish Quiz & Save Score
         function finishQuiz() {
             document.getElementById('quiz-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
@@ -858,9 +846,10 @@
             document.getElementById('final-accuracy').innerText = `${correctAnswersCount} / ${currentQuizData.length}`;
 
             saveToLeaderboard(studentName, studentId, score, correctAnswersCount);
+            sendToGoogleSheet(studentName, studentId, score, correctAnswersCount, rawQuizData.length);
         }
 
-        // Save to LocalStorage Leaderboard
+        // Simpan ke LocalStorage
         function saveToLeaderboard(name, id, score, correct) {
             let leaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
             
@@ -872,12 +861,60 @@
                 date: new Date().toLocaleDateString('ms-MY')
             });
 
-            // Sort by Score Descending
             leaderboard.sort((a, b) => b.score - a.score);
             localStorage.setItem('quiz_leaderboard', JSON.stringify(leaderboard));
         }
 
-        // Toggle Leaderboard Modal
+        // Hantar Data Keputusan Secara Berpusat ke Google Sheets Pensyarah
+        async function sendToGoogleSheet(name, id, score, correct, total) {
+            const statusDiv = document.getElementById('cloud-sync-status');
+
+            if (!GOOGLE_SHEET_SCRIPT_URL || GOOGLE_SHEET_SCRIPT_URL.includes("MASUKKAN_URL")) {
+                statusDiv.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Mod Tempatan (Google Sheet URL belum dikonfigurasi oleh pensyarah).</span>`;
+                return;
+            }
+
+            statusDiv.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Menghantar keputusan ke pangkalan data pensyarah...`;
+
+            try {
+                const payload = {
+                    name: name,
+                    id: id,
+                    score: score,
+                    correct: correct,
+                    total: total,
+                    date: new Date().toLocaleString('ms-MY')
+                };
+
+                await fetch(GOOGLE_SHEET_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Mencegah isu CORS Google Apps Script
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                statusDiv.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Keputusan berjaya dihantar ke Google Sheets Pensyarah!</span>`;
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i> Gagal menghantar ke cloud. Sila muat turun fail CSV bukti.</span>`;
+            }
+        }
+
+        // Fungsi Muat Turun Bukti Laporan CSV oleh Pelajar
+        function downloadCSVReport() {
+            const dateStr = new Date().toLocaleDateString('ms-MY');
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "Nama Pelajar,No Matrik,Jumlah Mata,Betul,Jumlah Soalan,Tarikh\n"
+                + `"${studentName}","${studentId}",${score},${correctAnswersCount},${rawQuizData.length},"${dateStr}"`;
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Laporan_Kuiz_${studentId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function toggleLeaderboardModal() {
             const modal = document.getElementById('leaderboard-modal');
             const list = document.getElementById('leaderboard-list');
@@ -917,7 +954,6 @@
             }
         }
 
-        // Clear Leaderboard
         function clearLeaderboard() {
             if (confirm("Adakah anda pasti untuk memadam semua rekod Leaderboard?")) {
                 localStorage.removeItem('quiz_leaderboard');
@@ -925,13 +961,11 @@
             }
         }
 
-        // Restart Quiz
         function restartQuiz() {
             document.getElementById('result-screen').classList.add('hidden');
             document.getElementById('registration-screen').classList.remove('hidden');
         }
 
-        // Window Load
         window.onload = function() {
             renderMath();
         };
