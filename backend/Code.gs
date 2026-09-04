@@ -237,3 +237,25 @@ function aiTutor_(e) {
   try { text = body.candidates[0].content.parts[0].text; } catch (er) { text = ''; }
   return json_({ ok: true, text: text || 'AI Tutor tiada respons buat masa ini.' });
 }
+
+// ============================================================================
+//  FUNGSI PERSEDIAAN — jalankan SEKALI di editor untuk beri kebenaran internet
+// ============================================================================
+/**
+ * Jalankan fungsi ini SEKALI di editor Apps Script (pilih 'grantPermissions'
+ * di dropdown -> Run). Google akan minta kebenaran "Connect to an external
+ * service" — klik Allow. Selepas itu AI Tutor akan berfungsi.
+ */
+function grantPermissions() {
+  var res = UrlFetchApp.fetch('https://www.googleapis.com/discovery/v1/apis', { muteHttpExceptions: true });
+  Logger.log('Kebenaran internet OK. Status: ' + res.getResponseCode());
+}
+
+/**
+ * Uji AI Tutor terus dari editor (pilih 'testAiTutor' -> Run, lihat Logs).
+ * Ini juga akan mencetuskan permintaan kebenaran internet jika belum diberi.
+ */
+function testAiTutor() {
+  var out = aiTutor_({ parameter: { q: 'Apakah unit SI bagi jisim?', sel: 'A', ans: 'Kilogram' } });
+  Logger.log(out.getContent());
+}
