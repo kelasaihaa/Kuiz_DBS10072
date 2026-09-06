@@ -33,6 +33,7 @@
 // ----- Tetapan -----
 var SHEET_LEADERBOARD = 'Leaderboard';
 var SHEET_LOG         = 'Log';
+var SHEET_BANK        = 'Bank';
 var LEADERBOARD_LIMIT = 200;
 var DEFAULT_MODEL     = 'gemini-2.5-flash';
 
@@ -83,6 +84,8 @@ function parseBody_(e) {
 function doPost(e) {
   try {
     var data = parseBody_(e);
+    // Tambah soalan ke Bank (dari borang pensyarah) — TIADA 'id' matrik.
+    if (data && data.action === 'addq') return addQuestion_(data);
     if (!data || !data.id) return json_({ ok: false, error: 'Data tidak lengkap (tiada matrik).' });
 
     var name    = safeCell_(data.name);
@@ -134,6 +137,40 @@ function upsertHighest_(sh, id, name, score, correct, total, now) {
 }
 
 // ============================================================================
+//  BANK SOALAN TERSUAI (ditambah oleh pensyarah)
+// ============================================================================
+/** Tambah satu soalan ke sheet "Bank". data.question ialah objek soalan penuh. */
+function addQuestion_(data) {
+  var q = data.question || {};
+  if (!q.topic || !q.question || !q.options || !q.answer) {
+    return json_({ ok: false, error: 'Soalan tidak lengkap (perlu topik, soalan, pilihan & jawapan).' });
+  }
+  if (!q.options[q.answer]) {
+    return json_({ ok: false, error: 'Kunci jawapan tidak sepadan dengan pilihan.' });
+  }
+  var jsonStr = JSON.stringify(q).substring(0, 6000);
+  var plainQ = String(q.question).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
+  var sh = sheet_(SHEET_BANK, ['Masa', 'Topik', 'Soalan', 'Jawapan', 'JSON(penuh)']);
+  sh.appendRow([new Date(), safeCell_(q.topic), safeCell_(plainQ), safeCell_(q.answer), jsonStr]);
+  return json_({ ok: true });
+}
+
+/** Pulangkan semua soalan tersuai daripada sheet "Bank". */
+function readBank_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_BANK);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var rows = sh.getRange(2, 5, sh.getLastRow() - 1, 1).getValues(); // lajur JSON(penuh)
+  var out = [];
+  rows.forEach(function (r, i) {
+    try {
+      var q = JSON.parse(r[0]);
+      if (q && q.question && q.options && q.answer) { q.qid = 'C' + (i + 1); out.push(q); }
+    } catch (er) { /* langkau baris rosak */ }
+  });
+  return out;
+}
+
+// ============================================================================
 //  BACA DATA (GET): leaderboard / stats / AI tutor
 // ============================================================================
 function doGet(e) {
@@ -141,6 +178,7 @@ function doGet(e) {
   try {
     if (action === 'ai')    return aiTutor_(e);
     if (action === 'stats') return json_({ ok: true, stats: computeStats_() });
+    if (action === 'bank')  return json_({ ok: true, bank: readBank_() });
     return json_({ ok: true, leaderboard: readLeaderboard_() });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
