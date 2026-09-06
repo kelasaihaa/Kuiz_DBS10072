@@ -88,6 +88,10 @@ function doPost(e) {
     if (data && data.action === 'addq') return addQuestion_(data);
     // Simpan pilihan soalan (set kuiz) — TIADA 'id' matrik.
     if (data && data.action === 'setselection') return setSelection_(data);
+    // Pengurusan berbilang kuiz — TIADA 'id' matrik.
+    if (data && data.action === 'savequiz')      return saveQuiz_(data);
+    if (data && data.action === 'setquizactive') return setQuizActive_(data);
+    if (data && data.action === 'deletequiz')    return deleteQuiz_(data);
     if (!data || !data.id) return json_({ ok: false, error: 'Data tidak lengkap (tiada matrik).' });
 
     var name    = safeCell_(data.name);
@@ -199,6 +203,89 @@ function readSelection_() {
 }
 
 // ============================================================================
+//  PENGURUSAN BERBILANG KUIZ (Quizzes)
+// ============================================================================
+var SHEET_QUIZZES = 'Quizzes';
+var QUIZZES_HEADERS = ['id', 'Tajuk', 'Aktif', 'Soalan(qids JSON)', 'Tetapan(JSON)', 'Dicipta', 'Dikemaskini'];
+
+function slugifyId_(title) {
+  var base = String(title || 'kuiz').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 30) || 'kuiz';
+  return base + '-' + Math.random().toString(36).substring(2, 6);
+}
+
+function findQuizRow_(sh, id) {
+  var last = sh.getLastRow();
+  if (last < 2) return -1;
+  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === id) return i + 2;
+  return -1;
+}
+
+function saveQuiz_(data) {
+  var title = safeCell_(data.title);
+  if (!title) return json_({ ok: false, error: 'Tajuk kuiz diperlukan.' });
+  var qids = Array.isArray(data.qids) ? data.qids.filter(function (x) { return typeof x === 'string'; }).slice(0, 500) : [];
+  if (!qids.length) return json_({ ok: false, error: 'Pilih sekurang-kurangnya 1 soalan.' });
+  var settings = (data.settings && typeof data.settings === 'object') ? data.settings : {};
+  var now = new Date();
+  var sh = sheet_(SHEET_QUIZZES, QUIZZES_HEADERS);
+  var id = (data.id && typeof data.id === 'string') ? data.id : '';
+  var active = (data.active === true);
+  if (id) {
+    var row = findQuizRow_(sh, id);
+    if (row === -1) return json_({ ok: false, error: 'Kuiz tidak dijumpai.' });
+    var created = sh.getRange(row, 6).getValue() || now;
+    sh.getRange(row, 2, 1, 6).setValues([[title, active, JSON.stringify(qids), JSON.stringify(settings), created, now]]);
+    return json_({ ok: true, id: id });
+  }
+  id = slugifyId_(title);
+  sh.appendRow([id, title, active, JSON.stringify(qids), JSON.stringify(settings), now, now]);
+  return json_({ ok: true, id: id });
+}
+
+function setQuizActive_(data) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUIZZES);
+  if (!sh) return json_({ ok: false, error: 'Tiada kuiz.' });
+  var row = findQuizRow_(sh, String(data.id || ''));
+  if (row === -1) return json_({ ok: false, error: 'Kuiz tidak dijumpai.' });
+  sh.getRange(row, 3).setValue(data.active === true);
+  sh.getRange(row, 7).setValue(new Date());
+  return json_({ ok: true });
+}
+
+function deleteQuiz_(data) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUIZZES);
+  if (!sh) return json_({ ok: false, error: 'Tiada kuiz.' });
+  var row = findQuizRow_(sh, String(data.id || ''));
+  if (row === -1) return json_({ ok: false, error: 'Kuiz tidak dijumpai.' });
+  sh.deleteRow(row);
+  return json_({ ok: true });
+}
+
+function readQuizzes_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUIZZES);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues();
+  return rows.map(function (r) {
+    var qids = []; try { qids = JSON.parse(r[3]) || []; } catch (e) {}
+    return { id: r[0], title: r[1], active: (r[2] === true || String(r[2]).toLowerCase() === 'true'), count: qids.length };
+  });
+}
+
+function readQuiz_(id) {
+  id = String(id || '');
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUIZZES);
+  if (!sh || sh.getLastRow() < 2) return null;
+  var row = findQuizRow_(sh, id);
+  if (row === -1) return null;
+  var v = sh.getRange(row, 1, 1, 5).getValues()[0];
+  var qids = []; try { qids = JSON.parse(v[3]) || []; } catch (e) {}
+  var settings = {}; try { settings = JSON.parse(v[4]) || {}; } catch (e) {}
+  return { id: v[0], title: v[1], active: (v[2] === true || String(v[2]).toLowerCase() === 'true'), qids: qids, settings: settings };
+}
+
+// ============================================================================
 //  BACA DATA (GET): leaderboard / stats / AI tutor
 // ============================================================================
 function doGet(e) {
@@ -209,6 +296,8 @@ function doGet(e) {
     if (action === 'bank')  return json_({ ok: true, bank: readBank_() });
     if (action === 'selection') return json_({ ok: true, selection: readSelection_() });
     if (action === 'log')       return json_({ ok: true, log: readLog_() });
+    if (action === 'quizzes')   return json_({ ok: true, quizzes: readQuizzes_() });
+    if (action === 'quiz')      return json_({ ok: true, quiz: readQuiz_(e.parameter.id) });
     return json_({ ok: true, leaderboard: readLeaderboard_() });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
