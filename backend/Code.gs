@@ -86,6 +86,8 @@ function doPost(e) {
     var data = parseBody_(e);
     // Tambah soalan ke Bank (dari borang pensyarah) — TIADA 'id' matrik.
     if (data && data.action === 'addq') return addQuestion_(data);
+    // Simpan pilihan soalan (set kuiz) — TIADA 'id' matrik.
+    if (data && data.action === 'setselection') return setSelection_(data);
     if (!data || !data.id) return json_({ ok: false, error: 'Data tidak lengkap (tiada matrik).' });
 
     var name    = safeCell_(data.name);
@@ -171,6 +173,32 @@ function readBank_() {
 }
 
 // ============================================================================
+//  PILIHAN SOALAN (set kuiz yang ditetapkan pensyarah)
+// ============================================================================
+/** Simpan pilihan: { mode:'selected'|'random', ids:[qid,...] } dalam Script Properties. */
+function setSelection_(data) {
+  var mode = (data.mode === 'selected') ? 'selected' : 'random';
+  var ids = [];
+  if (data.ids && data.ids.length) {
+    for (var i = 0; i < data.ids.length && ids.length < 500; i++) {
+      if (typeof data.ids[i] === 'string') ids.push(data.ids[i]);
+    }
+  }
+  PropertiesService.getScriptProperties().setProperty('QUIZ_SELECTION', JSON.stringify({ mode: mode, ids: ids }));
+  return json_({ ok: true, mode: mode, count: ids.length });
+}
+
+/** Baca pilihan semasa. Default: mod rawak. */
+function readSelection_() {
+  var v = PropertiesService.getScriptProperties().getProperty('QUIZ_SELECTION');
+  if (!v) return { mode: 'random', ids: [] };
+  try {
+    var o = JSON.parse(v);
+    return { mode: (o.mode === 'selected') ? 'selected' : 'random', ids: Array.isArray(o.ids) ? o.ids : [] };
+  } catch (e) { return { mode: 'random', ids: [] }; }
+}
+
+// ============================================================================
 //  BACA DATA (GET): leaderboard / stats / AI tutor
 // ============================================================================
 function doGet(e) {
@@ -179,6 +207,7 @@ function doGet(e) {
     if (action === 'ai')    return aiTutor_(e);
     if (action === 'stats') return json_({ ok: true, stats: computeStats_() });
     if (action === 'bank')  return json_({ ok: true, bank: readBank_() });
+    if (action === 'selection') return json_({ ok: true, selection: readSelection_() });
     return json_({ ok: true, leaderboard: readLeaderboard_() });
   } catch (err) {
     return json_({ ok: false, error: String(err) });

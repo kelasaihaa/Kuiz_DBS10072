@@ -365,6 +365,7 @@
                 <button id="dtab-stats" onclick="showDashStats()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-indigo-600 text-white border-indigo-400">Statistik</button>
                 <button id="dtab-bank" onclick="showDashBank()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Bank Soalan</button>
                 <button id="dtab-add" onclick="showDashAdd()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Tambah Soalan</button>
+                <button id="dtab-select" onclick="showDashSelect()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Pilih Soalan</button>
                 <button onclick="printQuestions()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-emerald-300 border-emerald-600/40 hover:bg-slate-700"><i class="fa-solid fa-print"></i> Cetak / PDF</button>
             </div>
             <div id="dashboard-body" class="flex-1 overflow-y-auto custom-scrollbar pr-1 text-sm text-slate-200">
@@ -854,8 +855,15 @@
             });
         }
 
-        // Pilih subset rawak bagi setiap topik, kemudian kocok pilihan setiap soalan.
+        // Jana set soalan. Jika pensyarah tetapkan pilihan sendiri, guna soalan yang
+        // ditanda sahaja (susunan diacak). Jika tidak, pilih subset rawak setiap topik.
         function generateShuffledQuizData() {
+            if (quizSelection && quizSelection.mode === 'selected' && quizSelection.ids && quizSelection.ids.length) {
+                const set = new Set(quizSelection.ids);
+                const chosen = rawQuizData.filter(q => set.has(q.qid));
+                if (chosen.length) return shuffleArray(chosen).map(buildQuestion);
+                // jika tiada padanan (qid berubah/soalan dipadam) → jatuh ke mod rawak
+            }
             const pick = (topicKey) => {
                 const pool = rawQuizData.filter(q => q.topic.includes(topicKey));
                 return shuffleArray(pool).slice(0, Math.min(QUIZ_CONFIG.perTopic, pool.length));
@@ -1319,7 +1327,7 @@
                 (active ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700');
         }
         function setDashActive(name) {
-            ['stats', 'bank', 'add'].forEach(t => { const b = document.getElementById('dtab-' + t); if (b) b.className = dashTabClass(t === name); });
+            ['stats', 'bank', 'add', 'select'].forEach(t => { const b = document.getElementById('dtab-' + t); if (b) b.className = dashTabClass(t === name); });
         }
         async function showDashStats() {
             setDashActive('stats');
@@ -1470,6 +1478,7 @@
 
         // ================= MUAT BANK SOALAN TERSUAI (C) dari backend =================
         let customBankCount = 0;
+        let quizSelection = { mode: 'random', ids: [] };  // set kuiz yang ditetapkan pensyarah
         async function loadCustomBank() {
             if (!BACKEND_URL) return;
             try {
@@ -1487,6 +1496,70 @@
                     customBankCount = data.bank.length;
                 }
             } catch (e) { /* backend belum sokong 'bank' atau offline — guna bank terbina */ }
+        }
+
+        // ================= PILIH SOALAN (set kuiz) =================
+        async function loadSelection() {
+            if (!BACKEND_URL) return;
+            try {
+                const res = await fetch(`${BACKEND_URL}?action=selection`);
+                const data = await res.json();
+                if (data && data.ok && data.selection) {
+                    quizSelection = {
+                        mode: data.selection.mode === 'selected' ? 'selected' : 'random',
+                        ids: Array.isArray(data.selection.ids) ? data.selection.ids : []
+                    };
+                }
+            } catch (e) { /* backend belum sokong 'selection' — guna mod rawak */ }
+        }
+
+        function stripHtml(s) { return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
+        function selAll(v) { document.querySelectorAll('#dashboard-body .q-sel').forEach(cb => cb.checked = v); updateSelCount(); }
+        function updateSelCount() {
+            const n = document.querySelectorAll('#dashboard-body .q-sel:checked').length;
+            const el = document.getElementById('sel-count'); if (el) el.innerText = n + ' ditanda';
+        }
+
+        function showDashSelect() {
+            setDashActive('select');
+            const body = document.getElementById('dashboard-body');
+            const t1 = rawQuizData.filter(q => q.topic.includes('Topik 1.0'));
+            const t2 = rawQuizData.filter(q => q.topic.includes('Topik 2.0'));
+            const sel = new Set(quizSelection.ids || []);
+            const row = (q) => `<label class="flex items-start gap-2 bg-slate-900/50 border border-slate-700/60 rounded-lg p-2 mb-1 cursor-pointer">
+                    <input type="checkbox" class="q-sel mt-1" value="${q.qid}" ${sel.has(q.qid) ? 'checked' : ''}>
+                    <span class="text-xs text-slate-200"><b class="text-indigo-300">${q.qid}</b> · ${escapeHtml(stripHtml(q.question)).slice(0, 90)} <span class="text-emerald-300">[${q.answer}]</span></span>
+                </label>`;
+            body.innerHTML = `
+                <div class="text-[11px] text-slate-400 mb-2">Tanda soalan yang anda mahu guna. Jika mod <b>"guna hanya soalan ditanda"</b> dihidupkan, kuiz guna soalan yang ditanda sahaja (susunan diacak). Jika tidak, sistem pilih rawak ${QUIZ_CONFIG.perTopic}/topik.</div>
+                <label class="flex items-center gap-2 mb-2 text-xs text-slate-100"><input type="checkbox" id="sel-mode" ${quizSelection.mode === 'selected' ? 'checked' : ''}> <b>Guna hanya soalan yang ditanda</b></label>
+                <div class="flex gap-2 mb-2 items-center">
+                    <button onclick="selAll(true)" class="px-2 py-1 text-[11px] bg-slate-800 rounded border border-slate-600 hover:bg-slate-700">Tanda semua</button>
+                    <button onclick="selAll(false)" class="px-2 py-1 text-[11px] bg-slate-800 rounded border border-slate-600 hover:bg-slate-700">Nyahtanda semua</button>
+                    <span id="sel-count" class="text-[11px] text-emerald-300 ml-auto"></span>
+                </div>
+                <h4 class="text-sm font-bold text-white mt-2 mb-1">Topik 1.0 (${t1.length})</h4>${t1.map(row).join('')}
+                <h4 class="text-sm font-bold text-white mt-3 mb-1">Topik 2.0 (${t2.length})</h4>${t2.map(row).join('')}
+                <div id="sel-msg" class="text-xs my-2"></div>
+                <button onclick="saveSelection()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg"><i class="fa-solid fa-floppy-disk"></i> Simpan Pilihan</button>`;
+            updateSelCount();
+            body.querySelectorAll('.q-sel').forEach(cb => cb.addEventListener('change', updateSelCount));
+        }
+
+        async function saveSelection() {
+            const ids = [...document.querySelectorAll('#dashboard-body .q-sel:checked')].map(cb => cb.value);
+            const mode = document.getElementById('sel-mode').checked ? 'selected' : 'random';
+            const msg = document.getElementById('sel-msg');
+            if (mode === 'selected' && ids.length < 1) {
+                msg.innerHTML = '<span class="text-rose-400">Tanda sekurang-kurangnya 1 soalan, atau matikan mod "guna hanya soalan ditanda".</span>';
+                return;
+            }
+            msg.innerHTML = '<span class="text-indigo-300"><i class="fa-solid fa-spinner animate-spin"></i> Menyimpan...</span>';
+            try {
+                await fetch(BACKEND_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'setselection', mode, ids }) });
+            } catch (e) {}
+            quizSelection = { mode, ids };
+            msg.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Pilihan disimpan. ${mode === 'selected' ? ('Kuiz akan guna ' + ids.length + ' soalan yang ditanda.') : 'Kuiz kembali ke mod rawak.'} (Pastikan backend terkini dipasang untuk berkongsi ke semua pelajar.)</span>`;
         }
 
         // ---- Skrin semakan jawapan ----
@@ -1631,6 +1704,7 @@
             });
 
             loadCustomBank(); // gabung soalan tersuai daripada Google Sheet (jika ada)
+            loadSelection();  // muat set kuiz yang ditetapkan pensyarah (jika ada)
             renderMath();
             init3DBackground();
             initTilt();
