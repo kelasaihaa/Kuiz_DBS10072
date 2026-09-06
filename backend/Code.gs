@@ -192,7 +192,7 @@ function readLeaderboard_() {
   var out = rows.map(function (r) {
     return { id: r[0], name: r[1], score: Number(r[2]) || 0, correct: Number(r[3]) || 0,
              total: Number(r[4]) || 0, attempts: Number(r[5]) || 0 };
-  });
+  }).filter(function (x) { return !/^TEST[-_]/i.test(String(x.id || '')); }); // sembunyi rekod ujian
   out.sort(function (a, b) { return b.score - a.score; });
   return out.slice(0, LEADERBOARD_LIMIT);
 }
@@ -206,6 +206,7 @@ function computeStats_() {
   var sumScore = 0, sumCorrect = 0, uniq = {}, qMap = {};
 
   rows.forEach(function (r) {
+    if (/^TEST[-_]/i.test(String(r[2] || ''))) return; // langkau rekod ujian (ghost)
     stats.attempts++;
     sumScore   += Number(r[3]) || 0;
     sumCorrect += Number(r[4]) || 0;
