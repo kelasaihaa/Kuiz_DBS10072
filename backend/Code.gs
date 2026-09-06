@@ -208,6 +208,7 @@ function doGet(e) {
     if (action === 'stats') return json_({ ok: true, stats: computeStats_() });
     if (action === 'bank')  return json_({ ok: true, bank: readBank_() });
     if (action === 'selection') return json_({ ok: true, selection: readSelection_() });
+    if (action === 'log')       return json_({ ok: true, log: readLog_() });
     return json_({ ok: true, leaderboard: readLeaderboard_() });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -224,6 +225,19 @@ function readLeaderboard_() {
   }).filter(function (x) { return !/^TEST[-_]/i.test(String(x.id || '')); }); // sembunyi rekod ujian
   out.sort(function (a, b) { return b.score - a.score; });
   return out.slice(0, LEADERBOARD_LIMIT);
+}
+
+/** Pulangkan SETIAP cubaan (untuk muat turun log penuh). Rekod ujian ditapis. */
+function readLog_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_LOG);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues(); // Masa,Nama,Matrik,Skor,Betul,Jumlah
+  var out = [];
+  rows.forEach(function (r) {
+    if (/^TEST[-_]/i.test(String(r[2] || ''))) return; // langkau rekod ujian
+    out.push({ time: r[0], name: r[1], id: r[2], score: Number(r[3]) || 0, correct: Number(r[4]) || 0, total: Number(r[5]) || 0 });
+  });
+  return out;
 }
 
 function computeStats_() {
