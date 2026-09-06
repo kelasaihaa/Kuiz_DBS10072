@@ -361,6 +361,12 @@
                 </div>
                 <button onclick="closeDashboard()" class="text-slate-400 hover:text-white p-1" aria-label="Tutup dashboard"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button id="dtab-stats" onclick="showDashStats()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-indigo-600 text-white border-indigo-400">Statistik</button>
+                <button id="dtab-bank" onclick="showDashBank()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Bank Soalan</button>
+                <button id="dtab-add" onclick="showDashAdd()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Tambah Soalan</button>
+                <button onclick="printQuestions()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-emerald-300 border-emerald-600/40 hover:bg-slate-700"><i class="fa-solid fa-print"></i> Cetak / PDF</button>
+            </div>
             <div id="dashboard-body" class="flex-1 overflow-y-auto custom-scrollbar pr-1 text-sm text-slate-200">
                 <div class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan statistik kelas...</div>
             </div>
@@ -1227,6 +1233,8 @@
             } catch (e) { return null; }
         }
         function renderLeaderboard(leaderboard, source) {
+            // Sembunyikan rekod ujian (matrik bermula 'TEST-') daripada paparan pelajar.
+            leaderboard = (leaderboard || []).filter(x => !/^TEST[-_]/i.test(String(x.id || '')));
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '';
             const srcBadge = document.createElement('div');
@@ -1302,8 +1310,19 @@
         }
 
         // ---- Dashboard pensyarah (statistik kelas) ----
-        async function openDashboard() {
+        function openDashboard() {
             document.getElementById('dashboard-modal').classList.remove('hidden');
+            showDashStats();
+        }
+        function dashTabClass(active) {
+            return 'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ' +
+                (active ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700');
+        }
+        function setDashActive(name) {
+            ['stats', 'bank', 'add'].forEach(t => { const b = document.getElementById('dtab-' + t); if (b) b.className = dashTabClass(t === name); });
+        }
+        async function showDashStats() {
+            setDashActive('stats');
             const body = document.getElementById('dashboard-body');
             body.innerHTML = `<div class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan statistik kelas...</div>`;
             let stats = null;
@@ -1350,6 +1369,124 @@
             const avg = lb.length ? Math.round(lb.reduce((a, e) => a + (e.score || 0), 0) / lb.length) : 0;
             body.innerHTML = `<div class="text-[11px] text-amber-300 mb-3"><i class="fa-solid fa-circle-info"></i> Backend tidak dapat dihubungi — memaparkan data peranti ini sahaja. Pasang backend/Code.gs untuk statistik kelas penuh.</div>
                 <div class="grid grid-cols-3 gap-3">${statCard('Pelajar (peranti)', lb.length)}${statCard('Cubaan', attempts)}${statCard('Purata Mata', avg)}</div>`;
+        }
+
+        // ================= BANK SOALAN (A): senarai semua soalan =================
+        function showDashBank() {
+            setDashActive('bank');
+            const body = document.getElementById('dashboard-body');
+            const t1 = rawQuizData.filter(q => q.topic.includes('Topik 1.0'));
+            const t2 = rawQuizData.filter(q => q.topic.includes('Topik 2.0'));
+            const card = (q, n) => {
+                const custom = (q.qid || '').charAt(0) === 'C';
+                const opts = Object.keys(q.options).map(k => {
+                    const correct = k === q.answer;
+                    return `<div class="text-xs ${correct ? 'text-emerald-300 font-semibold' : 'text-slate-300'}">${correct ? '✔ ' : ''}${k}. ${escapeHtml(q.options[k].en)}</div>`;
+                }).join('');
+                return `<div class="bg-slate-900/50 border border-slate-700/60 rounded-xl p-3 mb-2">
+                    <div class="flex justify-between gap-2 mb-1"><span class="text-xs font-bold text-indigo-300">${n}</span>${custom ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">TERSUAI</span>' : ''}</div>
+                    <div class="text-xs sm:text-sm text-slate-100 mb-1">${q.question}</div>${opts}
+                    ${q.hint ? `<div class="text-[11px] text-amber-300/80 mt-1"><i class="fa-solid fa-lightbulb"></i> ${escapeHtml(q.hint)}</div>` : ''}
+                </div>`;
+            };
+            body.innerHTML = `<div class="text-[11px] text-slate-400 mb-2">Jumlah ${rawQuizData.length} soalan (Topik 1: ${t1.length}, Topik 2: ${t2.length}). Setiap sesi kuiz memilih ${QUIZ_CONFIG.perTopic} rawak setiap topik.</div>`
+                + `<h4 class="text-sm font-bold text-white mt-2 mb-1">Topik 1.0</h4>` + t1.map((q, i) => card(q, 'T1-' + (i + 1))).join('')
+                + `<h4 class="text-sm font-bold text-white mt-3 mb-1">Topik 2.0</h4>` + t2.map((q, i) => card(q, 'T2-' + (i + 1))).join('');
+            renderMath();
+        }
+
+        // ================= TAMBAH SOALAN (C): borang =================
+        function showDashAdd() {
+            setDashActive('add');
+            const body = document.getElementById('dashboard-body');
+            body.innerHTML = `
+                <div class="space-y-3 text-xs">
+                    <div class="text-[11px] text-slate-400">Medan bertanda * wajib. Soalan dihantar ke Google Sheet & muncul untuk semua pelajar (pastikan backend Code.gs terkini telah dipasang).</div>
+                    <div><label class="block text-indigo-200 mb-1">Topik *</label>
+                        <select id="nq-topic" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100">
+                            <option value="T1">Topik 1.0 (Kuantiti Fizikal &amp; Pengukuran)</option>
+                            <option value="T2">Topik 2.0 (Gerakan Linear)</option></select></div>
+                    <div><label class="block text-indigo-200 mb-1">Soalan (English) *</label><textarea id="nq-q-en" rows="2" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"></textarea></div>
+                    <div><label class="block text-indigo-200 mb-1">Soalan (Bahasa Melayu)</label><textarea id="nq-q-ms" rows="2" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"></textarea></div>
+                    ${['A', 'B', 'C', 'D'].map(k => `<div class="grid grid-cols-2 gap-2"><input id="nq-${k}-en" placeholder="Pilihan ${k} (EN) *" class="bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"><input id="nq-${k}-ms" placeholder="Pilihan ${k} (MS)" class="bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"></div>`).join('')}
+                    <div><label class="block text-indigo-200 mb-1">Jawapan Betul *</label>
+                        <select id="nq-ans" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+                    <div><label class="block text-indigo-200 mb-1">Hint (pembayang)</label><input id="nq-hint" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100"></div>
+                    <div><label class="block text-indigo-200 mb-1">Penerangan (rationale)</label><textarea id="nq-rat" rows="2" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100" placeholder="Kosong = auto 'Jawapan Betul: X'"></textarea></div>
+                    <div id="nq-msg" class="text-xs"></div>
+                    <button onclick="submitNewQuestion()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg"><i class="fa-solid fa-plus"></i> Tambah Soalan</button>
+                </div>`;
+        }
+
+        async function submitNewQuestion() {
+            const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+            const msg = document.getElementById('nq-msg');
+            const qen = val('nq-q-en'), qms = val('nq-q-ms'), ans = val('nq-ans');
+            const opts = {}; let ok = true;
+            ['A', 'B', 'C', 'D'].forEach(k => { const en = val('nq-' + k + '-en'); if (!en) ok = false; opts[k] = { en: en, ms: val('nq-' + k + '-ms') || en }; });
+            if (!qen || !ok) { msg.innerHTML = '<span class="text-rose-400">Sila lengkapkan Soalan (EN) dan keempat-empat Pilihan (EN).</span>'; return; }
+            const TOPICS = { T1: "Bahagian A: Topik 1.0 (Kuantiti Fizikal & Pengukuran)", T2: "Bahagian B: Topik 2.0 (Gerakan Linear)" };
+            const question = qms ? `${qen}<br><span class='text-xs text-indigo-200 italic mt-1 block'>${qms}</span>` : qen;
+            const q = { topic: TOPICS[val('nq-topic')] || TOPICS.T1, question: question, options: opts, answer: ans, hint: val('nq-hint'), rationale: val('nq-rat') || `<b>Jawapan Betul: ${ans}</b>` };
+            msg.innerHTML = '<span class="text-indigo-300"><i class="fa-solid fa-spinner animate-spin"></i> Menyimpan...</span>';
+            try {
+                await fetch(BACKEND_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'addq', question: q }) });
+            } catch (e) {}
+            // Gabung tempatan supaya boleh guna serta-merta dalam sesi ini.
+            q.qid = 'C' + (++customBankCount);
+            const p = qen.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            q.label = q.qid + ': ' + p.slice(0, 46);
+            rawQuizData.push(q);
+            msg.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Soalan ditambah &amp; dihantar ke Google Sheet. Lihat di tab "Bank Soalan". (Untuk pelajar lain: pastikan backend terkini dipasang.)</span>';
+            ['nq-q-en', 'nq-q-ms', 'nq-A-en', 'nq-A-ms', 'nq-B-en', 'nq-B-ms', 'nq-C-en', 'nq-C-ms', 'nq-D-en', 'nq-D-ms', 'nq-hint', 'nq-rat'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+        }
+
+        // ================= CETAK / PDF (B) =================
+        function buildPrintHTML() {
+            const qs = rawQuizData; let paper = '', key = '';
+            qs.forEach((q, i) => {
+                const o = Object.keys(q.options).map(k => `<div class="opt"><b>${k}.</b> ${q.options[k].en}${(q.options[k].ms && q.options[k].ms !== q.options[k].en) ? ` <span class="ms">/ ${q.options[k].ms}</span>` : ''}</div>`).join('');
+                paper += `<div class="q"><div class="qn"><b>${i + 1}.</b> ${q.question}</div>${o}</div>`;
+                key += `<div class="k"><b>${i + 1}.</b> ${q.answer} — ${q.options[q.answer].en}</div>`;
+            });
+            return `<!doctype html><html lang="ms"><head><meta charset="utf-8"><title>Kertas Soalan DBS10072</title>`
+                + `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">`
+                + `<scr` + `ipt src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></scr` + `ipt>`
+                + `<scr` + `ipt src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></scr` + `ipt>`
+                + `<style>body{font-family:Arial,sans-serif;color:#111;margin:24px;line-height:1.4;}h1{font-size:18px;}h2{font-size:15px;border-bottom:2px solid #333;padding-bottom:4px;margin-top:22px;}.q{margin:12px 0;page-break-inside:avoid;}.qn{font-size:13px;margin-bottom:4px;}.opt{font-size:12px;margin:2px 0 2px 18px;}.ms{color:#555;font-style:italic;}.k{font-size:12px;margin:3px 0;}.key-section{page-break-before:always;}@media print{.noprint{display:none;}}</style>`
+                + `</head><body>`
+                + `<div class="noprint" style="margin-bottom:12px;"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>`
+                + `<h1>KUIZ DBS10072 SCIENCE — Bank Soalan (${qs.length} soalan)</h1>`
+                + `<h2>KERTAS SOALAN</h2>${paper}`
+                + `<div class="key-section"><h2>SKEMA JAWAPAN</h2>${key}</div>`
+                + `<scr` + `ipt>window.addEventListener('load',function(){try{renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}setTimeout(function(){window.print();},900);});</scr` + `ipt>`
+                + `</body></html>`;
+        }
+        function printQuestions() {
+            const w = window.open('', '_blank');
+            if (!w) { alert('Sila benarkan pop-up untuk mencetak / simpan PDF.'); return; }
+            w.document.open(); w.document.write(buildPrintHTML()); w.document.close();
+        }
+
+        // ================= MUAT BANK SOALAN TERSUAI (C) dari backend =================
+        let customBankCount = 0;
+        async function loadCustomBank() {
+            if (!BACKEND_URL) return;
+            try {
+                const res = await fetch(`${BACKEND_URL}?action=bank`);
+                const data = await res.json();
+                if (data && data.ok && Array.isArray(data.bank)) {
+                    data.bank.forEach((q, i) => {
+                        if (q && q.question && q.options && q.answer && q.topic) {
+                            q.qid = q.qid || ('C' + (i + 1));
+                            const p = q.question.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                            q.label = q.label || (q.qid + ': ' + p.slice(0, 46));
+                            rawQuizData.push(q);
+                        }
+                    });
+                    customBankCount = data.bank.length;
+                }
+            } catch (e) { /* backend belum sokong 'bank' atau offline — guna bank terbina */ }
         }
 
         // ---- Skrin semakan jawapan ----
@@ -1493,6 +1630,7 @@
                 q.label = 'S' + (i + 1) + ': ' + plain.slice(0, 46);
             });
 
+            loadCustomBank(); // gabung soalan tersuai daripada Google Sheet (jika ada)
             renderMath();
             init3DBackground();
             initTilt();
