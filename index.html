@@ -1233,6 +1233,8 @@
             } catch (e) { return null; }
         }
         function renderLeaderboard(leaderboard, source) {
+            // Sembunyikan rekod ujian (matrik bermula 'TEST-') daripada paparan pelajar.
+            leaderboard = (leaderboard || []).filter(x => !/^TEST[-_]/i.test(String(x.id || '')));
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '';
             const srcBadge = document.createElement('div');
