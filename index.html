@@ -68,6 +68,16 @@
 
     <div id="app" class="w-full max-w-3xl">
 
+        <!-- SCREEN 0: PEMILIH KUIZ (berbilang kuiz aktif) -->
+        <div id="quiz-picker-screen" class="hidden glass-card rounded-3xl p-6 sm:p-10 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-4 bg-indigo-600/30 rounded-2xl mb-3 border border-indigo-400/30"><i class="fa-solid fa-layer-group text-3xl text-indigo-300"></i></div>
+                <h1 class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">PILIH KUIZ</h1>
+                <p class="text-xs text-indigo-200/80 mt-1">Pilih kuiz yang anda mahu jawab</p>
+            </div>
+            <div id="picker-list" class="space-y-3"></div>
+        </div>
+
         <!-- SCREEN 1: REGISTRATION -->
         <div id="registration-screen" class="glass-card rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
             <div class="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/20 rounded-full blur-2xl"></div>
@@ -79,6 +89,8 @@
                     KUIZ PERSEDIAAN AMALI SAINS
                 </h1>
                 <p class="text-xs sm:text-sm text-indigo-200/80 mt-2">DBS10072 SCIENCE — TOPIK 1.0 & TOPIK 2.0</p>
+                <p id="active-quiz-name" class="hidden text-sm font-bold text-emerald-300 mt-2"></p>
+                <button id="picker-back" onclick="backToPicker()" class="hidden text-[11px] text-indigo-300 hover:text-white mt-1"><i class="fa-solid fa-arrow-left"></i> Tukar kuiz</button>
             </div>
 
             <form id="reg-form" onsubmit="startQuiz(event)" class="space-y-5">
@@ -363,6 +375,7 @@
             </div>
             <div class="flex flex-wrap gap-2 mb-3">
                 <button id="dtab-stats" onclick="showDashStats()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-indigo-600 text-white border-indigo-400">Statistik</button>
+                <button id="dtab-quiz" onclick="showDashQuizzes()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-amber-300 border-amber-600/40 hover:bg-slate-700">Kuiz</button>
                 <button id="dtab-bank" onclick="showDashBank()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Bank Soalan</button>
                 <button id="dtab-add" onclick="showDashAdd()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Tambah Soalan</button>
                 <button id="dtab-select" onclick="showDashSelect()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Pilih Soalan</button>
@@ -825,7 +838,7 @@
 
         // Tunjuk satu skrin, sembunyikan yang lain.
         function showScreen(id) {
-            ['registration-screen', 'quiz-screen', 'result-screen', 'review-screen'].forEach(s => {
+            ['quiz-picker-screen', 'registration-screen', 'quiz-screen', 'result-screen', 'review-screen'].forEach(s => {
                 const el = document.getElementById(s);
                 if (el) el.classList.toggle('hidden', s !== id);
             });
@@ -862,6 +875,12 @@
         // Jana set soalan. Jika pensyarah tetapkan pilihan sendiri, guna soalan yang
         // ditanda sahaja (susunan diacak). Jika tidak, pilih subset rawak setiap topik.
         function generateShuffledQuizData() {
+            // Keutamaan: kuiz dipilih (currentQuiz) > pilihan pensyarah (quizSelection) > rawak.
+            if (currentQuiz && Array.isArray(currentQuiz.qids) && currentQuiz.qids.length) {
+                const set = new Set(currentQuiz.qids);
+                const chosen = rawQuizData.filter(q => set.has(q.qid));
+                if (chosen.length) return shuffleArray(chosen).map(buildQuestion);
+            }
             if (quizSelection && quizSelection.mode === 'selected' && quizSelection.ids && quizSelection.ids.length) {
                 const set = new Set(quizSelection.ids);
                 const chosen = rawQuizData.filter(q => set.has(q.qid));
@@ -1365,7 +1384,7 @@
                 (active ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700');
         }
         function setDashActive(name) {
-            ['stats', 'bank', 'add', 'select'].forEach(t => { const b = document.getElementById('dtab-' + t); if (b) b.className = dashTabClass(t === name); });
+            ['stats', 'quiz', 'bank', 'add', 'select'].forEach(t => { const b = document.getElementById('dtab-' + t); if (b) b.className = dashTabClass(t === name); });
         }
         async function showDashStats() {
             setDashActive('stats');
@@ -1517,6 +1536,8 @@
         // ================= MUAT BANK SOALAN TERSUAI (C) dari backend =================
         let customBankCount = 0;
         let quizSelection = { mode: 'random', ids: [] };  // set kuiz yang ditetapkan pensyarah
+        let currentQuiz = null;   // kuiz berbilang yang dipilih {id,title,qids,settings}
+        let usedPicker = false;   // adakah pelajar datang dari skrin pemilih kuiz
         async function loadCustomBank() {
             if (!BACKEND_URL) return;
             try {
@@ -1549,6 +1570,74 @@
                     };
                 }
             } catch (e) { /* backend belum sokong 'selection' — guna mod rawak */ }
+        }
+
+        // ================= BERBILANG KUIZ: penghalaan & pemilih =================
+        function applyQuizSettings(s) {
+            s = s || {};
+            if (s.timePerQuestion) QUIZ_CONFIG.timePerQuestion = Number(s.timePerQuestion) || QUIZ_CONFIG.timePerQuestion;
+            if (s.basePoints)      QUIZ_CONFIG.basePoints      = Number(s.basePoints) || QUIZ_CONFIG.basePoints;
+            if (s.bonusPerSecond !== undefined && s.bonusPerSecond !== '') QUIZ_CONFIG.bonusPerSecond = Number(s.bonusPerSecond);
+        }
+        async function fetchQuizzes() {
+            if (!BACKEND_URL) return [];
+            try {
+                const r = await fetch(`${BACKEND_URL}?action=quizzes`);
+                const j = await r.json();
+                return (j && j.ok && Array.isArray(j.quizzes)) ? j.quizzes : [];
+            } catch (e) { return []; }
+        }
+        async function loadQuizById(id) {
+            try {
+                const r = await fetch(`${BACKEND_URL}?action=quiz&id=${encodeURIComponent(id)}`);
+                const j = await r.json();
+                if (j && j.ok && j.quiz && Array.isArray(j.quiz.qids) && j.quiz.qids.length) {
+                    currentQuiz = j.quiz;
+                    applyQuizSettings(j.quiz.settings);
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+        function showQuizTitleOnReg() {
+            const el = document.getElementById('active-quiz-name');
+            if (el && currentQuiz) { el.innerText = '📋 ' + currentQuiz.title + ' — ' + currentQuiz.qids.length + ' soalan'; el.classList.remove('hidden'); }
+            const back = document.getElementById('picker-back');
+            if (back) back.classList.toggle('hidden', !usedPicker);
+        }
+        // Tentukan skrin permulaan berdasarkan ?quiz= atau kuiz aktif.
+        async function routeQuizEntry() {
+            const qid = new URLSearchParams(location.search).get('quiz');
+            if (qid) {
+                if (await loadQuizById(qid)) { showQuizTitleOnReg(); showScreen('registration-screen'); return; }
+            }
+            const active = (await fetchQuizzes()).filter(q => q.active);
+            if (active.length === 1) {
+                if (await loadQuizById(active[0].id)) { showQuizTitleOnReg(); showScreen('registration-screen'); return; }
+            }
+            if (active.length > 1) { usedPicker = true; renderPicker(active); showScreen('quiz-picker-screen'); return; }
+            // tiada kuiz aktif → aliran biasa (bank sedia ada)
+            showScreen('registration-screen');
+        }
+        function renderPicker(active) {
+            const list = document.getElementById('picker-list');
+            list.innerHTML = '';
+            active.forEach(q => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'w-full text-left p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 flex items-center justify-between gap-3 transition-all';
+                btn.onclick = () => chooseQuiz(q.id);
+                btn.innerHTML = `<div><div class="font-bold text-slate-100 text-sm">${escapeHtml(q.title)}</div><div class="text-[11px] text-indigo-300">${q.count} soalan</div></div><i class="fa-solid fa-arrow-right text-indigo-400"></i>`;
+                list.appendChild(btn);
+            });
+        }
+        async function chooseQuiz(id) {
+            if (await loadQuizById(id)) { showQuizTitleOnReg(); showScreen('registration-screen'); }
+        }
+        function backToPicker() {
+            currentQuiz = null;
+            const el = document.getElementById('active-quiz-name'); if (el) el.classList.add('hidden');
+            routeQuizEntry();
         }
 
         function stripHtml(s) { return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
@@ -1598,6 +1687,114 @@
             } catch (e) {}
             quizSelection = { mode, ids };
             msg.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Pilihan disimpan. ${mode === 'selected' ? ('Kuiz akan guna ' + ids.length + ' soalan yang ditanda.') : 'Kuiz kembali ke mod rawak.'} (Pastikan backend terkini dipasang untuk berkongsi ke semua pelajar.)</span>`;
+        }
+
+        // ================= PENGURUSAN BERBILANG KUIZ (pensyarah) =================
+        async function showDashQuizzes() {
+            setDashActive('quiz');
+            const body = document.getElementById('dashboard-body');
+            body.innerHTML = `<div class="text-center text-slate-400 py-6"><i class="fa-solid fa-spinner animate-spin"></i> Memuatkan kuiz...</div>`;
+            const list = await fetchQuizzes();
+            let html = `<div class="flex justify-between items-center mb-3 gap-2">
+                <div class="text-[11px] text-slate-400">${list.length} kuiz. Aktifkan supaya pelajar boleh jawab. (Tiada kuiz aktif = pelajar guna kuiz asal.)</div>
+                <button onclick="showQuizForm()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shrink-0"><i class="fa-solid fa-plus"></i> Cipta Kuiz</button></div>`;
+            if (!list.length) {
+                html += `<div class="text-center text-slate-400 py-8 text-xs">Belum ada kuiz. Tekan "Cipta Kuiz" untuk mula.</div>`;
+            } else {
+                html += list.map(q => `
+                    <div class="bg-slate-900/50 border border-slate-700/60 rounded-xl p-3 mb-2">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                          <div class="font-bold text-slate-100 text-sm truncate">${escapeHtml(q.title)}</div>
+                          <div class="text-[10px] text-indigo-300">${q.count} soalan · <span class="font-mono">?quiz=${escapeHtml(q.id)}</span></div>
+                        </div>
+                        <label class="flex items-center gap-1 text-[11px] shrink-0 cursor-pointer">
+                          <input type="checkbox" ${q.active ? 'checked' : ''} onchange="toggleQuizActive('${q.id}', this.checked, this)">
+                          <span class="${q.active ? 'text-emerald-400' : 'text-slate-500'}">${q.active ? 'Aktif' : 'Tidak'}</span>
+                        </label>
+                      </div>
+                      <div class="flex gap-2 mt-2">
+                        <button onclick="showQuizForm('${q.id}')" class="text-[11px] px-2 py-1 bg-slate-800 rounded border border-slate-600 hover:bg-slate-700"><i class="fa-solid fa-pen"></i> Edit</button>
+                        <button onclick="copyQuizLink('${q.id}')" class="text-[11px] px-2 py-1 bg-slate-800 rounded border border-slate-600 hover:bg-slate-700"><i class="fa-solid fa-link"></i> Salin Link</button>
+                        <button onclick="deleteQuizAsk('${q.id}', this)" data-title="${escapeHtml(q.title)}" class="text-[11px] px-2 py-1 bg-rose-900/40 text-rose-300 rounded border border-rose-700/40 hover:bg-rose-900/60"><i class="fa-solid fa-trash"></i></button>
+                      </div>
+                    </div>`).join('');
+            }
+            html += `<div id="quiz-msg" class="text-xs mt-2"></div>`;
+            body.innerHTML = html;
+        }
+
+        async function showQuizForm(id) {
+            setDashActive('quiz');
+            const body = document.getElementById('dashboard-body');
+            let quiz = { id: '', title: '', qids: [], settings: {}, active: false };
+            if (id) {
+                body.innerHTML = `<div class="text-center text-slate-400 py-6"><i class="fa-solid fa-spinner animate-spin"></i> Memuat...</div>`;
+                try { const r = await fetch(`${BACKEND_URL}?action=quiz&id=${encodeURIComponent(id)}`); const j = await r.json(); if (j && j.ok && j.quiz) quiz = j.quiz; } catch (e) {}
+            }
+            const s = quiz.settings || {};
+            const sel = new Set(quiz.qids || []);
+            const t1 = rawQuizData.filter(q => q.topic.includes('Topik 1.0'));
+            const t2 = rawQuizData.filter(q => q.topic.includes('Topik 2.0'));
+            const row = (q) => `<label class="flex items-start gap-2 bg-slate-900/50 border border-slate-700/60 rounded-lg p-2 mb-1 cursor-pointer">
+                <input type="checkbox" class="qz-sel mt-1" value="${q.qid}" ${sel.has(q.qid) ? 'checked' : ''}>
+                <span class="text-xs text-slate-200"><b class="text-indigo-300">${q.qid}</b> · ${escapeHtml(stripHtml(q.question)).slice(0, 80)} <span class="text-emerald-300">[${q.answer}]</span></span></label>`;
+            body.innerHTML = `
+                <input type="hidden" id="qz-id" value="${escapeHtml(quiz.id || '')}">
+                <div class="mb-2"><label class="block text-indigo-200 text-xs mb-1">Tajuk Kuiz *</label>
+                    <input id="qz-title" value="${escapeHtml(quiz.title || '')}" placeholder="cth: Kuiz Topik 1 - Minggu 3" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100 text-sm"></div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div><label class="block text-indigo-200 text-xs mb-1">Masa/soalan (saat)</label><input id="qz-time" type="number" value="${s.timePerQuestion || QUIZ_CONFIG.timePerQuestion}" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100 text-sm"></div>
+                    <div><label class="block text-indigo-200 text-xs mb-1">Mata asas</label><input id="qz-base" type="number" value="${s.basePoints || QUIZ_CONFIG.basePoints}" class="w-full bg-slate-900/60 border border-slate-700 rounded-lg p-2 text-slate-100 text-sm"></div>
+                </div>
+                <label class="flex items-center gap-2 mb-2 text-xs text-slate-100"><input type="checkbox" id="qz-active" ${quiz.active ? 'checked' : ''}> Aktifkan kuiz ini serta-merta</label>
+                <div class="flex gap-2 mb-2 items-center">
+                    <button onclick="qzSelAll(true)" class="px-2 py-1 text-[11px] bg-slate-800 rounded border border-slate-600 hover:bg-slate-700">Tanda semua</button>
+                    <button onclick="qzSelAll(false)" class="px-2 py-1 text-[11px] bg-slate-800 rounded border border-slate-600 hover:bg-slate-700">Nyahtanda</button>
+                    <span id="qz-count" class="text-[11px] text-emerald-300 ml-auto"></span>
+                </div>
+                <h4 class="text-sm font-bold text-white mb-1">Topik 1.0 (${t1.length})</h4>${t1.map(row).join('')}
+                <h4 class="text-sm font-bold text-white mt-2 mb-1">Topik 2.0 (${t2.length})</h4>${t2.map(row).join('')}
+                <div id="qz-msg" class="text-xs my-2"></div>
+                <div class="flex gap-2">
+                    <button onclick="showDashQuizzes()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg">Batal</button>
+                    <button onclick="saveQuizForm()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg"><i class="fa-solid fa-floppy-disk"></i> Simpan Kuiz</button>
+                </div>`;
+            qzUpdateCount();
+            body.querySelectorAll('.qz-sel').forEach(cb => cb.addEventListener('change', qzUpdateCount));
+        }
+        function qzSelAll(v) { document.querySelectorAll('#dashboard-body .qz-sel').forEach(cb => cb.checked = v); qzUpdateCount(); }
+        function qzUpdateCount() { const n = document.querySelectorAll('#dashboard-body .qz-sel:checked').length; const el = document.getElementById('qz-count'); if (el) el.innerText = n + ' ditanda'; }
+        async function saveQuizForm() {
+            const id = document.getElementById('qz-id').value;
+            const title = document.getElementById('qz-title').value.trim();
+            const qids = [...document.querySelectorAll('#dashboard-body .qz-sel:checked')].map(cb => cb.value);
+            const settings = { timePerQuestion: Number(document.getElementById('qz-time').value) || QUIZ_CONFIG.timePerQuestion, basePoints: Number(document.getElementById('qz-base').value) || QUIZ_CONFIG.basePoints };
+            const active = document.getElementById('qz-active').checked;
+            const msg = document.getElementById('qz-msg');
+            if (!title) { msg.innerHTML = '<span class="text-rose-400">Sila isi tajuk kuiz.</span>'; return; }
+            if (!qids.length) { msg.innerHTML = '<span class="text-rose-400">Tanda sekurang-kurangnya 1 soalan.</span>'; return; }
+            msg.innerHTML = '<span class="text-indigo-300"><i class="fa-solid fa-spinner animate-spin"></i> Menyimpan...</span>';
+            const payload = { action: 'savequiz', title, qids, settings, active };
+            if (id) payload.id = id;
+            try { await fetch(BACKEND_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }); } catch (e) {}
+            msg.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Kuiz disimpan. (Pastikan backend terkini dipasang.)</span>';
+            setTimeout(showDashQuizzes, 1000);
+        }
+        async function toggleQuizActive(id, active, el) {
+            try { await fetch(BACKEND_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'setquizactive', id, active }) }); } catch (e) {}
+            if (el && el.nextElementSibling) { el.nextElementSibling.innerText = active ? 'Aktif' : 'Tidak'; el.nextElementSibling.className = active ? 'text-emerald-400' : 'text-slate-500'; }
+        }
+        async function deleteQuizAsk(id, btn) {
+            const title = (btn && btn.getAttribute('data-title')) || 'kuiz ini';
+            if (!confirm('Padam "' + title + '"? Tindakan ini tidak boleh dibatalkan.')) return;
+            try { await fetch(BACKEND_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'deletequiz', id }) }); } catch (e) {}
+            setTimeout(showDashQuizzes, 1000);
+        }
+        function copyQuizLink(id) {
+            const url = location.origin + location.pathname + '?quiz=' + id;
+            if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Link disalin:\n' + url), () => prompt('Salin link ini:', url));
+            else prompt('Salin link ini:', url);
         }
 
         // ---- Skrin semakan jawapan ----
@@ -1770,6 +1967,10 @@
             });
 
             maybeResume();
+            // Jika tiada kuiz separuh jalan disambung, tentukan skrin permulaan (pemilih kuiz / pendaftaran).
+            if (document.getElementById('quiz-screen').classList.contains('hidden')) {
+                routeQuizEntry();
+            }
         };
     </script>
 </body>
