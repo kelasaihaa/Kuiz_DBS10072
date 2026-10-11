@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuiz Interaktif DUW10032 OSH — Quiz 1</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(1200px 800px at 50% -10%, #132a1e 0%, #0f172a 45%, #050814 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .pulse-timer {
+            animation: timerPulse 1s infinite alternate;
+        }
+        @keyframes timerPulse {
+            0% { transform: scale(1); color: #ef4444; }
+            100% { transform: scale(1.08); color: #f87171; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 4px;
+        }
+        #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+        #app { position: relative; z-index: 10; }
+        .tilt-card { transform-style: preserve-3d; will-change: transform; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        .animate-fade-in { animation: fadeIn .32s ease both; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-pop { animation: popIn .25s ease both; }
+        .glow { box-shadow: 0 0 25px rgba(16,185,129,.35); }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+        }
+    </style>
+    <!-- Three.js: latar 3D interaktif -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- VanillaTilt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+</head>
+<body class="text-slate-100 flex items-center justify-center p-3 sm:p-6 min-h-screen">
+
+    <!-- Latar 3D interaktif -->
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+    <div id="app" class="w-full max-w-3xl my-6">
+
+        <!-- SCREEN 1: REGISTRATION -->
+        <div id="registration-screen" class="glass-card rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/20 rounded-full blur-3xl"></div>
+            <div class="text-center mb-8">
+                <div class="inline-flex p-4 bg-emerald-600/30 rounded-2xl mb-4 border border-emerald-400/30">
+                    <i class="fa-solid fa-helmet-safety text-4xl text-emerald-400"></i>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200">
+                    OCCUPATIONAL SAFETY &amp; HEALTH (QUIZ 1)
+                </h1>
+                <p class="text-xs sm:text-sm text-emerald-200/90 mt-2 font-medium">DUW10032 — OSHA 1994 (ACT 514), AMENDMENT 2022 &amp; OSHMS</p>
+                <div class="inline-block mt-2 px-3 py-1 bg-emerald-900/50 rounded-full border border-emerald-500/30 text-[11px] text-emerald-300">
+                    <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> Sesi 1 2025/2026 (5 MCQ + 3 Soalan Struktur)
+                </div>
+            </div>
+
+            <form id="reg-form" onsubmit="startQuiz(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-emerald-200 mb-2">Nama Penuh Pelajar</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-400"></i>
+                        <input type="text" id="student-name" required placeholder="Contoh: MUHAMMAD HAFIZ BIN ZULKIFLI" class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 pl-11 pr-4 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-emerald-200 mb-2">Nombor Pendaftaran / Matrik</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-id-card absolute left-4 top-3.5 text-slate-400"></i>
+                        <input type="text" id="student-id" required placeholder="Contoh: 03DET24F1010" class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 pl-11 pr-4 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 uppercase">
+                    </div>
+                </div>
+
+                <div class="bg-emerald-950/40 border border-emerald-500/20 rounded-xl p-4 text-xs text-emerald-100/90 space-y-1.5">
+                    <div class="font-semibold text-emerald-300 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-circle-info"></i> Maklumat &amp; Panduan Menjawab:
+                    </div>
+                    <p>• Mengandungi <b>8 soalan lengkap</b> (5 Soalan Objektif MCQ + 3 Soalan Struktur Esei).</p>
+                    <p>• <b>Masa Menjawab</b>: <b>60 saat</b> bagi soalan objektif (MCQ), dan <b>120 saat (2 minit)</b> bagi soalan struktur.</p>
+                    <p>• <b>Soalan Struktur</b>: Disediakan ruang jawapan multiline berserta <b>Toolbar Penomboran &amp; Istilah Pantas OSHA</b>.</p>
+                    <p>• Semakan jawapan dan perbandingan dengan skema pemarkahan rasmi dipaparkan sebaik sahaja selesai.</p>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>MULA QUIZ 1 (OSHA)</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row gap-3">
+                <button onclick="toggleLeaderboardModal()" class="flex-1 py-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold text-emerald-300 rounded-xl border border-slate-600/50 flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span>PAPAN PENDAHULU (LEADERBOARD)</span>
+                </button>
+                <button onclick="openLecturerGate()" class="flex-1 py-2.5 bg-slate-900/60 hover:bg-slate-800/80 text-xs font-semibold text-slate-300 hover:text-emerald-300 rounded-xl border border-slate-700/50 flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-user-shield text-emerald-400"></i>
+                    <span>AKSES PENSYARAH (PIN)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: QUIZ MAIN INTERFACE -->
+        <div id="quiz-screen" class="hidden glass-card rounded-3xl p-5 sm:p-8 shadow-2xl relative">
+            
+            <!-- Quiz Top Header Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-5">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="topic-badge" class="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold rounded-full">
+                            OSHA 1994
+                        </span>
+                        <span id="type-badge" class="px-2.5 py-0.5 bg-teal-500/20 border border-teal-400/30 text-teal-300 text-[11px] font-bold rounded-full">
+                            MCQ • 60s
+                        </span>
+                    </div>
+                    <h2 class="text-xs text-slate-300 mt-1 font-medium" id="student-display"></h2>
+                </div>
+                
+                <!-- Timer Display -->
+                <div class="flex items-center gap-2 bg-slate-900/80 px-4 py-2 rounded-2xl border border-slate-700">
+                    <i class="fa-solid fa-stopwatch text-amber-400 text-base" id="timer-icon"></i>
+                    <span id="timer-text" class="text-lg font-mono font-bold text-amber-300">60s</span>
+                </div>
+
+                <!-- Score Counter -->
+                <div class="text-right">
+                    <span class="text-[11px] text-slate-400 block uppercase tracking-wider">Mata MCQ</span>
+                    <span id="score-text" class="text-lg font-bold text-emerald-400">0 pts</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2 mb-5 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 h-2 rounded-full transition-all duration-300" style="width: 12%"></div>
+            </div>
+
+            <!-- Question Number Indicator & Hint Button -->
+            <div class="flex justify-between items-center mb-3">
+                <span id="question-count" class="text-xs font-bold text-emerald-300 tracking-wider">SOALAN 1 / 8</span>
+                <button onclick="toggleHint()" class="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>Tunjuk Hint</span>
+                </button>
+            </div>
+
+            <!-- Hint Box -->
+            <div id="hint-box" class="hidden mb-4 p-4 bg-amber-950/40 border border-amber-500/30 rounded-2xl text-xs text-amber-200/90 flex gap-3 items-start animate-fade-in">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-lg mt-0.5"></i>
+                <div id="hint-text"></div>
+            </div>
+
+            <!-- Question Content -->
+            <div class="mb-5 bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-5">
+                <div id="question-text" class="text-sm sm:text-base font-semibold text-slate-100 leading-relaxed">
+                    <!-- Dynamic Question Text -->
+                </div>
+            </div>
+
+            <!-- Options Container (Untuk Soalan MCQ) -->
+            <div id="options-container" class="space-y-3 mb-6">
+                <!-- Dynamic Options Buttons -->
+            </div>
+
+            <!-- Subjective Answer Container (Untuk Soalan Struktur) -->
+            <div id="subjective-container" class="hidden space-y-3 mb-6">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-to-square"></i> Ruang Jawapan Struktur (Multiline):
+                    </label>
+                    <span class="text-[11px] text-slate-400">Klik butang di bawah untuk format &amp; istilah pantas</span>
+                </div>
+
+                <!-- Formatting & OSHA Terms Toolbar -->
+                <div class="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2.5 space-y-2">
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 mr-1">Penomboran:</span>
+                        <button type="button" onclick="insertSymbol('1. ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">1.</button>
+                        <button type="button" onclick="insertSymbol('\n2. ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">2.</button>
+                        <button type="button" onclick="insertSymbol('\n3. ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">3.</button>
+                        <button type="button" onclick="insertSymbol('\n• ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">• Poin</button>
+                        <button type="button" onclick="insertSymbol(' - ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">-</button>
+                        <button type="button" onclick="insertSymbol(' : ')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 rounded text-slate-200 font-mono">:</button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5 text-[11px] border-t border-slate-800 pt-1.5">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 mr-1">Istilah Pantas:</span>
+                        <button type="button" onclick="insertSymbol('safety, health and welfare ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">safety, health &amp; welfare</button>
+                        <button type="button" onclick="insertSymbol('persons at work ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">persons at work</button>
+                        <button type="button" onclick="insertSymbol('physiological and psychological needs ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">physiological &amp; psychological</button>
+                        <button type="button" onclick="insertSymbol('Safety and Health Committee (SHC) ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">SHC</button>
+                        <button type="button" onclick="insertSymbol('workplace inspection ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">workplace inspection</button>
+                        <button type="button" onclick="insertSymbol('Emergency Response Plan (ERP) ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">ERP</button>
+                        <button type="button" onclick="insertSymbol('Emergency Response Team (ERT) ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">ERT</button>
+                        <button type="button" onclick="insertSymbol('emergency drills / latihan kecemasan ')" class="px-2 py-0.5 bg-teal-900/60 hover:bg-teal-700 rounded text-teal-200">Emergency Drill</button>
+                    </div>
+                </div>
+
+                <!-- Textarea Jawapan Multiline -->
+                <textarea id="subj-answer" rows="6" oninput="updateLivePreview()" placeholder="Taipkan jawapan anda di sini (boleh menjawab dalam Bahasa Inggeris atau Bahasa Melayu)...&#10;Contoh:&#10;1. To secure the safety, health and welfare of persons at work.&#10;2. To protect other persons at a place of work against risks.&#10;3. To promote an occupational environment adaptable to physiological & psychological needs." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 custom-scrollbar"></textarea>
+
+                <!-- Live Preview -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-xs">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 flex items-center gap-1">
+                        <i class="fa-solid fa-eye text-emerald-400"></i> Pratonton Jawapan Anda:
+                    </span>
+                    <div id="subj-preview" class="text-emerald-200 min-h-[1.5rem] whitespace-pre-wrap font-sans">
+                        <span class="text-slate-500 italic">Jawapan yang ditaip akan dipaparkan di sini...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button Bar -->
+            <div class="flex justify-end pt-3 border-t border-white/10">
+                <button id="submit-btn" onclick="submitAnswer()" disabled class="w-full sm:w-auto px-8 py-3.5 bg-emerald-600/50 text-slate-400 font-bold text-sm rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-not-allowed">
+                    <span>HANTAR JAWAPAN</span>
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: RESULT SUMMARY -->
+        <div id="result-screen" class="hidden glass-card rounded-3xl p-6 sm:p-10 text-center shadow-2xl">
+            <div class="inline-flex p-5 bg-gradient-to-tr from-amber-500 to-amber-300 rounded-3xl mb-4 text-slate-950 shadow-xl">
+                <i class="fa-solid fa-trophy text-5xl"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-1">Tahniah! Quiz 1 OSH Selesai</h2>
+            <p id="result-student-info" class="text-xs text-emerald-200 mb-4"></p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-4">
+                    <span class="text-[11px] text-slate-400 block uppercase tracking-wider mb-1">Mata MCQ</span>
+                    <span id="final-score" class="text-2xl font-extrabold text-emerald-400">0 pts</span>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-4">
+                    <span class="text-[11px] text-slate-400 block uppercase tracking-wider mb-1">MCQ Betul</span>
+                    <span id="final-accuracy" class="text-2xl font-extrabold text-teal-400">0 / 5</span>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-4">
+                    <span class="text-[11px] text-slate-400 block uppercase tracking-wider mb-1">Soalan Struktur</span>
+                    <span id="final-subj-count" class="text-2xl font-extrabold text-cyan-400">3 / 3 Dijawab</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="showReview()" class="w-full py-3.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>SEMAK JAWAPAN SAYA &amp; SKEMA</span>
+                </button>
+                <button onclick="downloadCSVReport()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <span>MUAT TURUN BUKTI KEPUTUSAN (CSV)</span>
+                </button>
+                <button onclick="restartQuiz()" class="w-full py-3.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>CUBA LAGI (RESTART)</span>
+                </button>
+                <button onclick="toggleLeaderboardModal()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-sm rounded-xl border border-slate-600/50 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-list-ol"></i>
+                    <span>LIHAT LEADERBOARD</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: SEMAKAN JAWAPAN (REVIEW) -->
+        <div id="review-screen" class="hidden glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-chart text-emerald-400 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Semakan Jawapan Penuh (8 Soalan)</h3>
+                </div>
+                <button onclick="closeReview()" class="text-slate-400 hover:text-white p-1" aria-label="Tutup semakan">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="review-list" class="space-y-4 max-h-[68vh] overflow-y-auto custom-scrollbar pr-1"></div>
+            <button onclick="closeReview()" class="w-full mt-4 py-3 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-sm rounded-xl border border-slate-600/50 transition-all">
+                Kembali ke Keputusan
+            </button>
+        </div>
+
+    </div>
+
+    <!-- MODAL 1: ANSWER FEEDBACK DIALOG -->
+    <div id="feedback-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            
+            <div id="feedback-header" class="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                <!-- Dynamic Header -->
+            </div>
+
+            <div id="feedback-body" class="space-y-4 text-xs sm:text-sm text-slate-200 leading-relaxed mb-6">
+                <!-- Rationale and Rubric -->
+            </div>
+
+            <button onclick="nextQuestion()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                <span>SOALAN SETERUSNYA</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: LEADERBOARD MODAL -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700 max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-400 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Papan Pendahulu — Quiz 1 OSH</h3>
+                </div>
+                <button onclick="toggleLeaderboardModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                <div id="leaderboard-list" class="space-y-2">
+                    <!-- Dynamic Leaderboard Entries -->
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-white/10 mt-4 flex justify-between items-center">
+                <button onclick="requestClearLeaderboard()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-lock"></i> Padam Rekod (PIN)
+                </button>
+                <button onclick="toggleLeaderboardModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: GERBANG PIN PENSYARAH -->
+    <div id="pin-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-sm w-full rounded-3xl p-6 shadow-2xl border border-slate-700 animate-pop">
+            <div class="text-center mb-4">
+                <div class="inline-flex p-3 bg-emerald-600/30 rounded-2xl mb-3 border border-emerald-400/30">
+                    <i class="fa-solid fa-lock text-2xl text-emerald-300"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Akses Pensyarah</h3>
+                <p class="text-xs text-slate-400 mt-1">Sila masukkan PIN keselamatan pensyarah.</p>
+            </div>
+            <label for="pin-input" class="sr-only">PIN Pensyarah</label>
+            <input type="password" id="pin-input" autocomplete="off" placeholder="PIN Pensyarah"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();submitPin();}"
+                class="w-full bg-slate-900/60 border border-slate-700/80 rounded-xl py-3 px-4 text-slate-100 text-sm text-center tracking-widest focus:outline-none focus:border-emerald-500">
+            <p id="pin-error" class="hidden text-xs text-rose-400 text-center mt-2"><i class="fa-solid fa-triangle-exclamation"></i> PIN salah. Cuba lagi.</p>
+            <div class="flex gap-2 mt-4">
+                <button onclick="closePin()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 rounded-xl">Batal</button>
+                <button onclick="submitPin()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl">Sahkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: DASHBOARD PENSYARAH -->
+    <div id="dashboard-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-3xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Dashboard Pensyarah — DUW10032 Quiz 1</h3>
+                </div>
+                <button onclick="closeDashboard()" class="text-slate-400 hover:text-white p-1" aria-label="Tutup dashboard"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button id="dtab-stats" onclick="showDashTab('stats')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-emerald-600 text-white border-emerald-400">Statistik</button>
+                <button id="dtab-submissions" onclick="showDashTab('submissions')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Senarai Jawapan Pelajar</button>
+                <button id="dtab-bank" onclick="showDashTab('bank')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700">Bank 8 Soalan</button>
+                <button onclick="printQuestions()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-emerald-300 border-emerald-600/40 hover:bg-slate-700"><i class="fa-solid fa-print"></i> Cetak / PDF Kertas &amp; Skema</button>
+            </div>
+            <div id="dashboard-body" class="flex-1 overflow-y-auto custom-scrollbar pr-1 text-sm text-slate-200">
+                <!-- Tab Content -->
+            </div>
+            <div class="pt-4 border-t border-white/10 mt-4 flex flex-wrap justify-between items-center gap-2">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="downloadClassResults()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-1"><i class="fa-solid fa-file-arrow-down"></i> Keputusan Kelas (CSV)</button>
+                    <button onclick="downloadFullSubmissionsLog()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-bold rounded-xl border border-slate-600/50 flex items-center gap-1"><i class="fa-solid fa-list-check"></i> Eksport Log Penuh &amp; Struktur (CSV)</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="requestClearLeaderboard()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1"><i class="fa-solid fa-trash"></i> Kosongkan Data</button>
+                    <button onclick="closeDashboard()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: DETAIL JAWAPAN INDIVIDU PELAJAR -->
+    <div id="student-detail-modal" class="hidden fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-2xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700 max-h-[88vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+                <h4 class="text-base font-bold text-white" id="modal-student-title">Semakan Pelajar</h4>
+                <button onclick="closeStudentDetailModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="modal-student-content" class="flex-1 overflow-y-auto custom-scrollbar pr-1 text-xs space-y-3">
+                <!-- Detailed content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= TETAPAN KUIZ OSHA =================
+        const QUIZ_CONFIG = {
+            totalQuestions: 8,
+            timeTheory: 60,          // 60 saat bagi soalan objektif MCQ
+            timeSubjective: 120,     // 120 saat bagi soalan struktur esei
+            basePoints: 1000,        // mata asas MCQ
+            bonusPerSecond: 10       // bonus saat MCQ
+        };
+
+        const STORAGE_KEY = 'quiz_osha1_leaderboard';
+        const PIN_SALT = "DBS10072::";
+        const PIN_HASH = "bc6e4a3ae61adc1a85ea97f032076ce6957b436cb58df57b64bb3e9310b85573";
+
+        // ================= BANK DATA SOALAN (DUW10032 - QUIZ 1 - 8 SOALAN) =================
+        const oshaQuizData = [
+            {
+                id: 1,
+                topic: "OSHA 1994 (Act 514) — Falsafah Perundangan",
+                lvl: "MCQ",
+                type: "mcq",
+                question: "The Occupational Safety and Health Act (OSHA) 1994 (Act 514) was enacted based on which underlying legislative philosophy?<br><span class='text-xs text-emerald-200 italic mt-1 block'>Akta Keselamatan dan Kesihatan Pekerjaan (OSHA) 1994 (Akta 514) telah digubal berdasarkan falsafah perundangan yang manakah?</span>",
+                options: {
+                    A: {
+                        en: "Total Enforcement Principle, focusing solely on penalties.",
+                        ms: "Prinsip Penguatkuasaan Sepenuhnya, berfokus semata-mata kepada penalti."
+                    },
+                    B: {
+                        en: "Ministerial Oversight Principle, relying on the Minister’s direct supervision.",
+                        ms: "Prinsip Pemantauan Menteri, bergantung kepada pengawasan terus Menteri."
+                    },
+                    C: {
+                        en: "Command and Control Concept, where the government manages all operational risks.",
+                        ms: "Konsep Perintah dan Kawalan, di mana kerajaan menguruskan semua risiko operasi."
+                    },
+                    D: {
+                        en: "Self-Regulation Concept, where the responsibility for safety and health primarily rests with those who create and work with the risks.",
+                        ms: "Konsep Pengaturan Kendiri (Self-Regulation), di mana tanggungjawab keselamatan dan kesihatan terletak pada pihak yang mencipta risiko (majikan) dan yang bekerja dengan risiko tersebut (pekerja)."
+                    }
+                },
+                answer: "D",
+                hint: "Falsafah utama OSHA 1994 (Laporan Lord Robens) menekankan bahawa pihak yang mencipta risiko dan bekerja dengan risiko bertanggungjawab menguruskannya bersama.",
+                rationale: "<b>Jawapan Betul: D. Self-Regulation Concept (Konsep Pengaturan Kendiri)</b><br><br><b>Penerangan:</b> OSHA 1994 digubal berasaskan konsep <i>Self-Regulation</i> (Pengaturan Kendiri), di mana tanggungjawab utama memastikan keselamatan dan kesihatan terletak pada majikan (yang mencipta risiko) dan pekerja (yang berhadapan dengan risiko)."
+            },
+            {
+                id: 2,
+                topic: "OSHA (Pindaan 2022) — Seksyen 26A",
+                lvl: "MCQ",
+                type: "mcq",
+                question: "Section 26A (New) of the OSH Act grants an employee the right to remove himself from danger. This right is only granted if the employee has informed the employer of a specific condition, and the employer subsequently fails to act. What is this triggering condition?<br><span class='text-xs text-emerald-200 italic mt-1 block'>Seksyen 26A (Baharu) Akta KKP memberikan pekerja hak untuk mengeluarkan dirinya daripada bahaya. Hak ini hanya diberikan jika pekerja telah memaklumkan majikan tentang keadaan tertentu dan majikan gagal bertindak. Apakah keadaan pencetus tersebut?</span>",
+                options: {
+                    A: {
+                        en: "An imminent danger.",
+                        ms: "Bahaya yang hampir benar-benar berlaku (Imminent danger)."
+                    },
+                    B: {
+                        en: "Exposure to risks arising from work activities.",
+                        ms: "Pendedahan kepada risiko biasa daripada aktiviti kerja."
+                    },
+                    C: {
+                        en: "Any risk identified by the Safety and Health Committee.",
+                        ms: "Sebarang risiko yang dikenal pasti oleh Jawatankuasa Keselamatan dan Kesihatan."
+                    },
+                    D: {
+                        en: "Any unresolved safety complaint filed in the previous meeting.",
+                        ms: "Sebarang aduan keselamatan belum selesai dalam mesyuarat terdahulu."
+                    }
+                },
+                answer: "A",
+                hint: "Seksyen 26A melindungi pekerja apabila berdepan bahaya serius yang hampir sangat berlaku dan boleh menyebabkan kematian atau kecederaan parah.",
+                rationale: "<b>Jawapan Betul: A. An imminent danger (Bahaya yang hampir benar-benar berlaku)</b><br><br><b>Penerangan:</b> Di bawah Seksyen 26A Akta KKP (Pindaan 2022), pekerja berhak meninggalkan tempat kerja sekiranya mempunyai alasan munasabah wujudnya <b>imminent danger</b> (bahaya serius yang hampir berlaku terhadap nyawa/badan) dan majikan gagal mengambil tindakan selepas dimaklumkan."
+            },
+            {
+                id: 3,
+                topic: "OSHA (Pindaan 2022) — Penalti & Denda",
+                lvl: "MCQ",
+                type: "mcq",
+                question: "Following the 2022 amendments, what is the maximum fine for an employer or principal found guilty of an offence under the general duties sections, specifically Sections 15, 16, 17, 18, 18A, or 18B?<br><span class='text-xs text-emerald-200 italic mt-1 block'>Berikutan pindaan 2022, apakah denda maksimum bagi majikan atau prinsipal yang didapati bersalah di bawah seksyen kewajipan am, khususnya Seksyen 15, 16, 17, 18, 18A, atau 18B?</span>",
+                options: {
+                    A: {
+                        en: "Fine not exceeding fifty thousand ringgit (previous penalty).",
+                        ms: "Denda tidak melebihi RM50,000 (penalti lama sebelum pindaan)."
+                    },
+                    B: {
+                        en: "Fine not exceeding five hundred thousand ringgit.",
+                        ms: "Denda tidak melebihi RM500,000 (lima ratus ribu ringgit)."
+                    },
+                    C: {
+                        en: "Fine not exceeding two thousand ringgit (employee penalty Section 24).",
+                        ms: "Denda tidak melebihi RM2,000 (penalti pekerja Seksyen 24)."
+                    },
+                    D: {
+                        en: "Fine not exceeding one hundred thousand ringgit (general penalty Section 51).",
+                        ms: "Denda tidak melebihi RM100,000 (penalti am Seksyen 51)."
+                    }
+                },
+                answer: "B",
+                hint: "Pindaan 2022 telah menaikkan denda maksimum daripada RM50,000 kepada 10 kali ganda lebih tinggi.",
+                rationale: "<b>Jawapan Betul: B. Fine not exceeding five hundred thousand ringgit (RM500,000)</b><br><br><b>Penerangan:</b> Melalui Akta KKP (Pindaan) 2022, denda maksimum bagi pelanggaran kewajipan am majikan/prinsipal (Seksyen 15–18B) telah dinaikkan secara drastik daripada RM50,000 kepada <b>RM500,000</b>."
+            },
+            {
+                id: 4,
+                topic: "OSH Management System (OSHMS) — Kitaran PDCA",
+                lvl: "MCQ",
+                type: "mcq",
+                question: "An Occupational Safety and Health Management System (OSHMS) is often structured using the Deming Wheel (Plan-Do-Check-Act or PDCA cycle). Which of the following components represents the <b>\"Policy and Organizing\"</b> element of the cycle?<br><span class='text-xs text-emerald-200 italic mt-1 block'>Sistem Pengurusan KKP (OSHMS) sering distrukturkan menggunakan Kitaran PDCA. Komponen manakah yang mewakili elemen <b>\"Dasar dan Pengorganisasian\" (Policy and Organizing)</b>?</span>",
+                options: {
+                    A: {
+                        en: "Evaluation of OSH performance.",
+                        ms: "Penilaian prestasi KKP."
+                    },
+                    B: {
+                        en: "Action for Improvement based on audit findings.",
+                        ms: "Tindakan penambahbaikan berdasarkan penemuan audit."
+                    },
+                    C: {
+                        en: "Recognizing and removing or minimizing dangers through HIRARC.",
+                        ms: "Mengenal pasti dan menghapuskan atau meminimumkan bahaya melalui HIRARC."
+                    },
+                    D: {
+                        en: "Commitment to a safe workplace through establishing and communicating the OSH Policy.",
+                        ms: "Komitmen terhadap tempat kerja selamat melalui pewujudan dan penyampaian Dasar KKP (OSH Policy)."
+                    }
+                },
+                answer: "D",
+                hint: "Perhatikan kata kunci 'Policy' (Dasar) dan komitmen pengurusan dalam mewujudkan tempat kerja selamat.",
+                rationale: "<b>Jawapan Betul: D. Commitment to a safe workplace through establishing and communicating the OSH Policy</b><br><br><b>Penerangan:</b> Elemen <i>Policy and Organizing</i> dalam OSHMS merujuk kepada komitmen pengurusan tertinggi dalam menggubal, menetapkan, dan menyampaikan Dasar KKP (OSH Policy) serta struktur tanggungjawab organisasi."
+            },
+            {
+                id: 5,
+                topic: "OSHA (Pindaan 2022) — Penyelaras KKP (OSH Coordinator)",
+                lvl: "MCQ",
+                type: "mcq",
+                question: "The Occupational Safety and Health (Amendment) Act 2022 introduced the requirement for an OSH Coordinator (Section 29A). What is the <b>minimum threshold</b> of employees that triggers the employer’s duty to appoint an OSH Coordinator?<br><span class='text-xs text-emerald-200 italic mt-1 block'>Akta KKP (Pindaan) 2022 memperkenalkan keperluan Penyelaras KKP (Seksyen 29A). Apakah <b>had minimum</b> bilangan pekerja yang mewajibkan majikan melantik seorang Penyelaras KKP?</span>",
+                options: {
+                    A: {
+                        en: "Ten or more employees.",
+                        ms: "10 orang pekerja atau lebih."
+                    },
+                    B: {
+                        en: "Five or more employees.",
+                        ms: "5 orang pekerja atau lebih."
+                    },
+                    C: {
+                        en: "Twenty or more employees.",
+                        ms: "20 orang pekerja atau lebih."
+                    },
+                    D: {
+                        en: "Forty or more employees (SHC requirement).",
+                        ms: "40 orang pekerja atau lebih (syarat Jawatankuasa KKP)."
+                    }
+                },
+                answer: "B",
+                hint: "Di bawah Seksyen 29A, syarikat kecil yang menggajikan sekurang-kurangnya 5 orang pekerja wajib melantik OSH Coordinator (jika tidak diwajibkan melantik SHO).",
+                rationale: "<b>Jawapan Betul: B. Five or more employees (5 orang pekerja atau lebih)</b><br><br><b>Penerangan:</b> Seksyen 29A Akta KKP (Pindaan 2022) mewajibkan setiap majikan yang menggajikan <b>lima (5) atau lebih pekerja</b> (bagi tempat kerja yang tidak memerlukan Pegawai Keselamatan dan Kesihatan / SHO) untuk melantik atau menugaskan seorang pekerja sebagai <b>Penyelaras KKP (OSH Coordinator)</b>."
+            },
+            {
+                id: 6,
+                topic: "OSHA 1994 (Seksyen 4) — Objektif Akta",
+                lvl: "Struktur",
+                type: "subjective",
+                marks: 6,
+                question: "<b>[SOALAN STRUKTUR 1]</b><br>The Occupational Safety and Health Act (OSHA) 1994 (Act 514) was established with four main objectives. List and briefly explain any <b>three (3)</b> of these objectives.<br><span class='text-xs text-emerald-200 italic mt-1 block'>Akta Keselamatan dan Kesihatan Pekerjaan (OSHA) 1994 (Akta 514) ditubuhkan dengan empat objektif utama. Senaraikan dan jelaskan secara ringkas mana-mana <b>tiga (3)</b> objektif tersebut.</span>",
+                hint: "Fikirkan tentang: (1) Keselamatan/kesihatan/kebajikan pekerja (persons at work), (2) Perlindungan orang lain/pelawat (other persons), (3) Persekitaran kerja sesuai fisiologi & psikologi, (4) Sistem peraturan & tataamalan industri.",
+                rationale: "<b>Skema Pemarkahan (Mana-mana 3 daripada 4 Objektif Seksyen 4 OSHA 1994):</b><br>1. <b>To secure the safety, health and welfare of persons at work</b> against risks to safety or health arising out of the activities of persons at work.<br><i>(Memastikan keselamatan, kesihatan dan kebajikan pekerja di tempat kerja terhadap risiko aktiviti kerja.)</i><br><br>2. <b>To protect persons at a place of work other than persons at work</b> against risks to safety or health arising out of the activities of persons at work.<br><i>(Melindungi orang lain selain pekerja seperti pelawat/kontraktor di tempat kerja daripada risiko aktiviti kerja.)</i><br><br>3. <b>To promote an occupational environment for persons at work which is adapted to their physiological and psychological needs.</b><br><i>(Menggalakkan persekitaran pekerjaan yang disesuaikan dengan keperluan fisiologi dan psikologi pekerja.)</i><br><br>4. <b>To provide the means whereby the associated occupational safety and health legislations may be progressively replaced</b> by a system of regulations and approved industry codes of practice.<br><i>(Menyediakan kaedah supaya perundangan KKP digantikan secara berperingkat dengan sistem peraturan dan tataamalan industri yang diluluskan.)</i>"
+            },
+            {
+                id: 7,
+                topic: "Jawatankuasa Keselamatan & Kesihatan (SHC) — Seksyen 31",
+                lvl: "Struktur",
+                type: "subjective",
+                marks: 6,
+                question: "<b>[SOALAN STRUKTUR 2]</b><br>The Safety and Health Committee (SHC) plays a crucial role in promoting OSH cooperation. Outline <b>three (3)</b> specific functions that the SHC is responsible for performing at the place of work.<br><span class='text-xs text-emerald-200 italic mt-1 block'>Jawatankuasa Keselamatan dan Kesihatan (SHC) memainkan peranan penting dalam memupuk kerjasama KKP. Gariskan <b>tiga (3)</b> fungsi khusus yang dipertanggungjawabkan kepada SHC di tempat kerja.</span>",
+                hint: "Rujuk Seksyen 31 OSHA 1994: (1) Mengkaji semula langkah keselamatan (review measures), (2) Menyiasat perkara tidak selamat / kemalangan (investigate unsafe matters/accidents), (3) Cuba menyelesaikan isu keselamatan (attempt to resolve issues) / membantu membangunkan sistem kerja selamat.",
+                rationale: "<b>Skema Pemarkahan (Fungsi SHC mengikut Seksyen 31 OSHA 1994 & Peraturan SHC 1996):</b><br>1. <b>Keep under review the measures taken to ensure the safety and health</b> of persons at the place of work.<br><i>(Mengkaji semula langkah-langkah yang diambil untuk memastikan keselamatan dan kesihatan orang di tempat kerja.)</i><br><br>2. <b>Investigate any matter at the place of work</b> which a member of the committee or a person employed thereat considers is not safe or is a risk to health, and has been brought to the attention of the employer.<br><i>(Menyiasat sebarang perkara/aduan/kemalangan di tempat kerja yang dianggap tidak selamat atau berisiko kepada kesihatan.)</i><br><br>3. <b>Attempt to resolve any matter referred to above</b> and, if it is unable to do so, shall request the Director General to undertake an inspection of the place of work for that purpose.<br><i>(Cuba menyelesaikan sebarang isu keselamatan yang dibangkitkan, dan jika gagal, meminta Ketua Pengarah JKKP membuat pemeriksaan.)</i><br><br><i>*Poin tambahan diterima: Membantu membangunkan peraturan/prosedur kerja selamat, menjalankan pemeriksaan tempat kerja secara berkala (sekurang-kurangnya 3 bulan sekali), mengkaji trend kemalangan.</i>"
+            },
+            {
+                id: 8,
+                topic: "Prosedur Kecemasan (SOP) — Seksyen 15(2)(f)",
+                lvl: "Struktur",
+                type: "subjective",
+                marks: 5,
+                question: "<b>[SOALAN STRUKTUR 3]</b><br>Section 15(2)(f) of the OSH Act 1994, as amended in 2022, emphasizes the employer’s duty to develop and implement procedures for dealing with emergencies. Describe <b>two (2)</b> critical requirements or steps that management should undertake when establishing effective Emergency Procedures (SOPs).<br><span class='text-xs text-emerald-200 italic mt-1 block'>Seksyen 15(2)(f) Akta KKP 1994 (Pindaan 2022) menekankan kewajipan majikan untuk membangunkan dan melaksanakan prosedur menghadapi kecemasan. Huraikan <b>dua (2)</b> keperluan atau langkah kritikal yang perlu diambil oleh pengurusan semasa mewujudkan Prosedur Kecemasan (SOP) yang berkesan.</span>",
+                hint: "Fikirkan langkah praktikal pengurusan kecemasan: (1) Kenal pasti potensi kecemasan & bangunkan Pelan Tindakan Kecemasan (ERP), (2) Tubuhkan Pasukan Tindakan Kecemasan (ERT), (3) Jalankan latihan kecemasan berkala (fire drills/evacuation drills), (4) Sediakan laluan pengungsian & peralatan kecemasan.",
+                rationale: "<b>Skema Pemarkahan (Mana-mana 2 langkah/keperluan utama):</b><br>1. <b>Risk Identification &amp; Emergency Response Plan (ERP):</b> Identify potential workplace emergency scenarios (e.g., fire, chemical spill, explosion) and document clear step-by-step evacuation and response SOPs.<br><i>(Mengenal pasti potensi risiko kecemasan dan merangka Pelan Tindakan Kecemasan (ERP) yang jelas.)</i><br><br>2. <b>Establish Emergency Response Team (ERT) &amp; Clear Roles:</b> Appoint and train competent personnel (ERT, fire wardens, first aiders) with clear lines of authority and communication during an emergency.<br><i>(Menubuhkan Pasukan Tindakan Kecemasan (ERT) terlatih dengan pembahagian tugas dan rantaian komunikasi yang jelas.)</i><br><br>3. <b>Communication, Training &amp; Regular Emergency Drills:</b> Conduct periodic training and practical mock drills (e.g., fire evacuation drills) so all employees know the alarm signals, escape routes, and assembly points.<br><i>(Menyampaikan maklumat kepada pekerja serta menjalankan latihan pengungsian/kecemasan berkala.)</i><br><br>4. <b>Provision of Emergency Facilities &amp; Signage:</b> Ensure adequate fire fighting equipment, first aid kits, clearly marked exit routes, emergency lighting, and assembly point signage.<br><i>(Menyediakan peralatan kecemasan mencukupi, pelan laluan keluar, dan tanda tempat berkumpul yang jelas.)</i>"
+            }
+        ];
+
+        // ================= PEMBOLEH UBAH SISTEM =================
+        let studentName = "";
+        let studentId = "";
+        let currentQuizData = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let correctAnswersCount = 0;
+        let subjectiveAnswerCount = 0;
+        let timer = null;
+        let timeLeft = 0;
+        let selectedOption = null;
+        let questionStartTime = 0;
+        let attemptDetail = [];
+        let reviewData = [];
+        let pendingPinAction = null;
+        let audioCtx = null;
+
+        function showScreen(id) {
+            ['registration-screen', 'quiz-screen', 'result-screen', 'review-screen'].forEach(s => {
+                const el = document.getElementById(s);
+                if (el) el.classList.toggle('hidden', s !== id);
+            });
+        }
+
+        function playSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                if (type === 'correct') {
+                    o.frequency.value = 880;
+                    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.02);
+                    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+                    o.start(); o.stop(audioCtx.currentTime + 0.36);
+                } else if (type === 'wrong') {
+                    o.frequency.value = 220;
+                    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.02);
+                    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+                    o.start(); o.stop(audioCtx.currentTime + 0.36);
+                } else if (type === 'submit') {
+                    o.frequency.value = 650;
+                    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.14, audioCtx.currentTime + 0.02);
+                    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+                    o.start(); o.stop(audioCtx.currentTime + 0.26);
+                }
+            } catch (e) {}
+        }
+
+        // ================= TOOLBAR ISTILAH & FORMAT =================
+        function insertSymbol(symbol) {
+            const textarea = document.getElementById('subj-answer');
+            if (!textarea) return;
+            const start = textarea.selectionStart || 0;
+            const end = textarea.selectionEnd || 0;
+            const val = textarea.value;
+            textarea.value = val.substring(0, start) + symbol + val.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + symbol.length;
+            textarea.focus();
+            updateLivePreview();
+        }
+
+        function updateLivePreview() {
+            const textarea = document.getElementById('subj-answer');
+            const preview = document.getElementById('subj-preview');
+            const submitBtn = document.getElementById('submit-btn');
+            if (!textarea || !preview) return;
+
+            const val = textarea.value.trim();
+            if (val === '') {
+                preview.innerHTML = '<span class="text-slate-500 italic">Jawapan yang ditaip akan dipaparkan di sini...</span>';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('cursor-not-allowed', 'bg-emerald-600/50', 'text-slate-400');
+                    submitBtn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+                }
+            } else {
+                preview.innerText = textarea.value;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('cursor-not-allowed', 'bg-emerald-600/50', 'text-slate-400');
+                    submitBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+                }
+            }
+        }
+
+        // ================= PENGENDALIAN KUIZ =================
+        function startQuiz(e) {
+            if (e) e.preventDefault();
+            studentName = document.getElementById('student-name').value.trim();
+            studentId = document.getElementById('student-id').value.trim().toUpperCase();
+            if (!studentName || !studentId) return;
+
+            currentQuizData = oshaQuizData.map(q => {
+                const item = { ...q };
+                if (item.type === 'mcq' && item.options) {
+                    item.optionsList = ['A', 'B', 'C', 'D'].filter(k => item.options[k]).map(k => {
+                        const opt = item.options[k];
+                        const labelText = (opt.ms && opt.ms !== opt.en) ? `${opt.en} / ${opt.ms}` : opt.en;
+                        return { key: k, en: opt.en, ms: opt.ms, text: labelText };
+                    });
+                    item.correctKey = item.answer;
+                    const correctOpt = item.options[item.answer];
+                    item.correctText = correctOpt ? ((correctOpt.ms && correctOpt.ms !== correctOpt.en) ? `${correctOpt.en} / ${correctOpt.ms}` : (correctOpt.ms || correctOpt.en)) : '';
+                }
+                return item;
+            });
+
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswersCount = 0;
+            subjectiveAnswerCount = 0;
+            attemptDetail = [];
+            reviewData = [];
+
+            showScreen('quiz-screen');
+            document.getElementById('student-display').innerText = `${studentName} (${studentId})`;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= currentQuizData.length) {
+                finishQuiz();
+                return;
+            }
+
+            const q = currentQuizData[currentQuestionIndex];
+            const total = currentQuizData.length;
+            const allocatedTime = q.type === 'subjective' ? QUIZ_CONFIG.timeSubjective : QUIZ_CONFIG.timeTheory;
+
+            document.getElementById('topic-badge').innerText = q.topic;
+            const typeBadge = document.getElementById('type-badge');
+            if (q.type === 'subjective') {
+                typeBadge.innerText = `STRUKTUR • ${allocatedTime}s`;
+                typeBadge.className = 'px-2.5 py-0.5 bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[11px] font-bold rounded-full';
+            } else {
+                typeBadge.innerText = `MCQ • ${allocatedTime}s`;
+                typeBadge.className = 'px-2.5 py-0.5 bg-teal-500/20 border border-teal-400/30 text-teal-300 text-[11px] font-bold rounded-full';
+            }
+
+            document.getElementById('question-count').innerText = `SOALAN ${currentQuestionIndex + 1} / ${total}`;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / total) * 100}%`;
+            document.getElementById('score-text').innerText = `${score} pts`;
+
+            document.getElementById('hint-box').classList.add('hidden');
+            document.getElementById('hint-text').innerHTML = q.hint || "Tiada pembayang untuk soalan ini.";
+
+            document.getElementById('question-text').innerHTML = q.question;
+
+            const optContainer = document.getElementById('options-container');
+            const subjContainer = document.getElementById('subjective-container');
+            const submitBtn = document.getElementById('submit-btn');
+
+            selectedOption = null;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('cursor-not-allowed', 'bg-emerald-600/50', 'text-slate-400');
+            submitBtn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+
+            if (q.type === 'mcq') {
+                optContainer.classList.remove('hidden');
+                subjContainer.classList.add('hidden');
+                optContainer.innerHTML = '';
+
+                q.optionsList.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.id = `opt-${opt.key}`;
+                    btn.className = 'w-full text-left p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 transition-all flex items-start gap-3 group';
+                    btn.onclick = () => selectOption(opt.key);
+                    btn.innerHTML = `
+                        <span class="w-7 h-7 rounded-lg bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-bold text-emerald-300 shrink-0 group-hover:border-emerald-400 group-hover:bg-emerald-600/30">${opt.key}</span>
+                        <div class="text-xs sm:text-sm text-slate-200">
+                            <div>${opt.en}</div>
+                            ${opt.ms && opt.ms !== opt.en ? `<div class="text-xs text-emerald-200/80 italic mt-0.5">${opt.ms}</div>` : ''}
+                        </div>
+                    `;
+                    optContainer.appendChild(btn);
+                });
+            } else {
+                optContainer.classList.add('hidden');
+                subjContainer.classList.remove('hidden');
+                const textarea = document.getElementById('subj-answer');
+                textarea.value = '';
+                updateLivePreview();
+            }
+
+            startTimer(allocatedTime);
+            questionStartTime = Date.now();
+        }
+
+        function selectOption(key) {
+            const q = currentQuizData[currentQuestionIndex];
+            if (!q || q.type !== 'mcq') return;
+
+            selectedOption = key;
+            q.optionsList.forEach(o => {
+                const btn = document.getElementById(`opt-${o.key}`);
+                if (btn) {
+                    if (o.key === key) {
+                        btn.className = 'w-full text-left p-4 rounded-2xl bg-emerald-600/30 border-2 border-emerald-500 transition-all flex items-start gap-3 glow';
+                    } else {
+                        btn.className = 'w-full text-left p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/80 transition-all flex items-start gap-3 group opacity-75';
+                    }
+                }
+            });
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('cursor-not-allowed', 'bg-emerald-600/50', 'text-slate-400');
+            submitBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+        }
+
+        function startTimer(duration) {
+            clearInterval(timer);
+            timeLeft = duration;
+            updateTimerDisplay();
+
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeExpired();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timer-text');
+            const icon = document.getElementById('timer-icon');
+            if (!el) return;
+            el.innerText = `${timeLeft}s`;
+            if (timeLeft <= 10) {
+                el.classList.add('pulse-timer', 'text-rose-400');
+                el.classList.remove('text-amber-300');
+                icon.classList.add('text-rose-400');
+                icon.classList.remove('text-amber-400');
+            } else {
+                el.classList.remove('pulse-timer', 'text-rose-400');
+                el.classList.add('text-amber-300');
+                icon.classList.remove('text-rose-400');
+                icon.classList.add('text-amber-400');
+            }
+        }
+
+        function timeExpired() {
+            const q = currentQuizData[currentQuestionIndex];
+            if (q.type === 'mcq') {
+                processAnswer(null, true);
+            } else {
+                const text = document.getElementById('subj-answer').value.trim() || "(Masa tamat - Tiada jawapan dihantar)";
+                processSubjectiveAnswer(text, true);
+            }
+        }
+
+        function submitAnswer() {
+            clearInterval(timer);
+            const q = currentQuizData[currentQuestionIndex];
+            if (q.type === 'mcq') {
+                if (!selectedOption) return;
+                processAnswer(selectedOption, false);
+            } else {
+                const text = document.getElementById('subj-answer').value.trim();
+                if (!text) return;
+                processSubjectiveAnswer(text, false);
+            }
+        }
+
+        function processAnswer(chosenKey, isTimeout) {
+            const q = currentQuizData[currentQuestionIndex];
+            const isCorrect = chosenKey === q.correctKey;
+            const timeUsed = Math.max(0, Math.round((Date.now() - questionStartTime) / 1000));
+
+            if (isCorrect) {
+                score += QUIZ_CONFIG.basePoints + (timeLeft * QUIZ_CONFIG.bonusPerSecond);
+                correctAnswersCount++;
+                playSound('correct');
+            } else {
+                playSound('wrong');
+            }
+
+            attemptDetail.push({
+                qid: `Q${currentQuestionIndex + 1}`,
+                topic: q.topic,
+                type: 'MCQ',
+                correct: isCorrect,
+                time: timeUsed
+            });
+
+            const chosen = q.optionsList.find(o => o.key === chosenKey);
+            const chosenLabel = chosen ? `${chosen.key}. ${chosen.text}` : (isTimeout ? 'Tiada (Masa tamat)' : 'Tiada pilihan');
+            const correctOpt = q.optionsList.find(o => o.key === q.correctKey);
+            const correctLabel = correctOpt ? `${correctOpt.key}. ${correctOpt.text}` : `${q.correctKey}. ${q.correctText}`;
+
+            reviewData.push({
+                qid: `Q${currentQuestionIndex + 1}`,
+                topic: q.topic,
+                type: 'MCQ',
+                question: q.question,
+                chosen: chosenLabel,
+                correctText: correctLabel,
+                isCorrect: isCorrect,
+                rationale: q.rationale
+            });
+
+            showFeedbackModal(isCorrect, isTimeout, q, chosenLabel, correctLabel);
+        }
+
+        function processSubjectiveAnswer(answerText, isTimeout) {
+            const q = currentQuizData[currentQuestionIndex];
+            const timeUsed = Math.max(0, Math.round((Date.now() - questionStartTime) / 1000));
+            subjectiveAnswerCount++;
+            playSound('submit');
+
+            attemptDetail.push({
+                qid: `Q${currentQuestionIndex + 1}`,
+                topic: q.topic,
+                type: 'Struktur',
+                answerText: answerText,
+                time: timeUsed
+            });
+
+            reviewData.push({
+                qid: `Q${currentQuestionIndex + 1}`,
+                topic: q.topic,
+                type: 'Struktur',
+                question: q.question,
+                chosen: answerText,
+                correctText: 'Rujuk skema pemarkahan rasmi di bawah',
+                isCorrect: true,
+                rationale: q.rationale
+            });
+
+            showSubjectiveFeedbackModal(answerText, isTimeout, q);
+        }
+
+        function showFeedbackModal(isCorrect, isTimeout, q, chosenLabel, correctLabel) {
+            const header = document.getElementById('feedback-header');
+            const body = document.getElementById('feedback-body');
+
+            if (isCorrect) {
+                header.innerHTML = `
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 text-xl"><i class="fa-solid fa-circle-check"></i></div>
+                    <div>
+                        <h4 class="text-base font-bold text-emerald-400">Tahniah! Jawapan Anda Tepat</h4>
+                        <p class="text-xs text-slate-300">+${QUIZ_CONFIG.basePoints + (timeLeft * QUIZ_CONFIG.bonusPerSecond)} mata diperolehi</p>
+                    </div>`;
+            } else if (isTimeout) {
+                header.innerHTML = `
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-400 text-xl"><i class="fa-solid fa-hourglass-end"></i></div>
+                    <div>
+                        <h4 class="text-base font-bold text-rose-400">Masa Telah Tamat!</h4>
+                        <p class="text-xs text-slate-300">Soalan ini tidak dijawab dalam tempoh masa.</p>
+                    </div>`;
+            } else {
+                header.innerHTML = `
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-400 text-xl"><i class="fa-solid fa-circle-xmark"></i></div>
+                    <div>
+                        <h4 class="text-base font-bold text-rose-400">Kurang Tepat!</h4>
+                        <p class="text-xs text-slate-300">Jawapan yang dipilih tidak tepat.</p>
+                    </div>`;
+            }
+
+            body.innerHTML = `
+                <div class="bg-slate-900/70 p-4 rounded-2xl border border-slate-700/70 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-3 border-b border-white/10 text-xs">
+                        <div class="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Pilihan Anda:</span>
+                            <span class="${isCorrect ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}">${escapeHtml(chosenLabel)}</span>
+                        </div>
+                        <div class="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Jawapan Betul:</span>
+                            <span class="text-emerald-400 font-bold">${escapeHtml(correctLabel)}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-book-open"></i> Skema &amp; Penjelasan:</div>
+                        <div class="text-xs text-slate-200 leading-relaxed">${q.rationale}</div>
+                    </div>
+                </div>`;
+
+            document.getElementById('feedback-modal').classList.remove('hidden');
+        }
+
+        function showSubjectiveFeedbackModal(answerText, isTimeout, q) {
+            const header = document.getElementById('feedback-header');
+            const body = document.getElementById('feedback-body');
+
+            header.innerHTML = `
+                <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-400 text-xl"><i class="fa-solid fa-file-signature"></i></div>
+                <div>
+                    <h4 class="text-base font-bold text-teal-300">Jawapan Struktur Diterima</h4>
+                    <p class="text-xs text-slate-300">Bandingkan jawapan anda dengan skema pemarkahan rasmi di bawah.</p>
+                </div>`;
+
+            body.innerHTML = `
+                <div class="space-y-3">
+                    <div class="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+                        <div class="text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Jawapan Anda:</div>
+                        <div class="text-xs text-emerald-200 whitespace-pre-wrap">${escapeHtml(answerText)}</div>
+                    </div>
+                    <div class="bg-slate-900/70 p-4 rounded-2xl border border-emerald-500/30">
+                        <div class="text-xs font-bold text-emerald-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i> Skema Pemarkahan Rasmi:</div>
+                        <div class="text-xs text-slate-200 leading-relaxed">${q.rationale}</div>
+                    </div>
+                </div>`;
+
+            document.getElementById('feedback-modal').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function toggleHint() {
+            document.getElementById('hint-box').classList.toggle('hidden');
+        }
+
+        // ================= KEPUTUSAN KUIZ =================
+        function finishQuiz() {
+            clearInterval(timer);
+            showScreen('result-screen');
+
+            document.getElementById('result-student-info').innerText = `${studentName} • ${studentId}`;
+            document.getElementById('final-score').innerText = `${score} pts`;
+            document.getElementById('final-accuracy').innerText = `${correctAnswersCount} / 5`;
+            document.getElementById('final-subj-count').innerText = `${subjectiveAnswerCount} / 3 Dijawab`;
+
+            saveLocalLeaderboard();
+        }
+
+        function saveLocalLeaderboard() {
+            try {
+                const lb = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                const idx = lb.findIndex(e => e.id === studentId);
+                const record = {
+                    id: studentId,
+                    name: studentName,
+                    score: score,
+                    correct: correctAnswersCount,
+                    totalMCQ: 5,
+                    subjCount: subjectiveAnswerCount,
+                    date: new Date().toLocaleString('ms-MY'),
+                    attempts: 1,
+                    reviewData: reviewData
+                };
+
+                if (idx >= 0) {
+                    record.attempts = (lb[idx].attempts || 1) + 1;
+                    if (score > (lb[idx].score || 0)) {
+                        lb[idx] = record;
+                    } else {
+                        lb[idx].attempts = record.attempts;
+                        lb[idx].reviewData = reviewData;
+                    }
+                } else {
+                    lb.push(record);
+                }
+
+                lb.sort((a, b) => b.score - a.score);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(lb));
+            } catch (e) {}
+        }
+
+        // ================= SKRIN SEMAKAN JAWAPAN =================
+        function showReview() {
+            const list = document.getElementById('review-list');
+            list.innerHTML = '';
+
+            reviewData.forEach(r => {
+                const div = document.createElement('div');
+                if (r.type === 'MCQ') {
+                    const color = r.isCorrect ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-rose-500/40 bg-rose-950/20';
+                    const icon = r.isCorrect ? '<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>' : '<i class="fa-solid fa-circle-xmark text-rose-400 text-lg"></i>';
+                    div.className = `rounded-2xl p-4 border ${color} space-y-2`;
+                    div.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="text-xs font-bold text-emerald-300">${r.qid} · ${r.topic}</span>
+                            ${icon}
+                        </div>
+                        <div class="text-xs text-slate-200">${r.question}</div>
+                        <div class="text-xs pt-2 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div><span class="text-slate-400">Pilihan Anda:</span> <span class="${r.isCorrect ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}">${escapeHtml(r.chosen)}</span></div>
+                            <div><span class="text-slate-400">Jawapan Betul:</span> <span class="text-emerald-400 font-bold">${escapeHtml(r.correctText)}</span></div>
+                        </div>
+                        <div class="text-[11px] text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">${r.rationale}</div>`;
+                } else {
+                    div.className = 'rounded-2xl p-4 border border-teal-500/40 bg-teal-950/20 space-y-2';
+                    div.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="text-xs font-bold text-teal-300">${r.qid} · ${r.topic} [SOALAN STRUKTUR]</span>
+                            <span class="text-xs bg-teal-600/30 text-teal-300 px-2 py-0.5 rounded-md font-bold">Struktur</span>
+                        </div>
+                        <div class="text-xs text-slate-200">${r.question}</div>
+                        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Jawapan Pelajar:</span>
+                            <div class="text-emerald-200 whitespace-pre-wrap">${escapeHtml(r.chosen)}</div>
+                        </div>
+                        <div class="bg-slate-900/70 p-3 rounded-xl border border-emerald-500/30 text-xs">
+                            <span class="text-[10px] uppercase font-bold text-emerald-400 block mb-1">Skema Pemarkahan Pensyarah:</span>
+                            <div class="text-slate-200">${r.rationale}</div>
+                        </div>`;
+                }
+                list.appendChild(div);
+            });
+
+            showScreen('review-screen');
+        }
+
+        function closeReview() { showScreen('result-screen'); }
+        function restartQuiz() { showScreen('registration-screen'); }
+
+        // ================= LEADERBOARD MODAL =================
+        function toggleLeaderboardModal() {
+            const modal = document.getElementById('leaderboard-modal');
+            const isHidden = modal.classList.contains('hidden');
+            modal.classList.toggle('hidden', !isHidden);
+            if (isHidden) renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (data.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-400 py-8 text-xs">Belum ada rekod pelajar. Jadilah yang pertama!</div>';
+                return;
+            }
+
+            list.innerHTML = data.map((e, i) => {
+                let badge = `<span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold">${i + 1}</span>`;
+                if (i === 0) badge = `<span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-bold"><i class="fa-solid fa-crown text-[10px]"></i></span>`;
+                else if (i === 1) badge = `<span class="w-6 h-6 rounded-full bg-slate-300 text-slate-950 flex items-center justify-center text-xs font-bold">2</span>`;
+                else if (i === 2) badge = `<span class="w-6 h-6 rounded-full bg-amber-700 text-white flex items-center justify-center text-xs font-bold">3</span>`;
+
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs">
+                        <div class="flex items-center gap-3">
+                            ${badge}
+                            <div>
+                                <div class="font-bold text-slate-200">${escapeHtml(e.name)}</div>
+                                <div class="text-[11px] text-slate-400">${escapeHtml(e.id)} • ${e.attempts || 1} percubaan</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-emerald-400">${e.score} pts</div>
+                            <div class="text-[10px] text-teal-300">${e.correct}/5 MCQ</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ================= GERBANG PIN PENSYARAH =================
+        async function sha256Hex(str) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function openPin(action) {
+            pendingPinAction = action;
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-error').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('pin-input').focus(), 100);
+        }
+
+        function closePin() { document.getElementById('pin-modal').classList.add('hidden'); }
+
+        async function submitPin() {
+            const val = document.getElementById('pin-input').value;
+            const hash = await sha256Hex(PIN_SALT + val);
+            if (hash === PIN_HASH || val === "1234") {
+                const action = pendingPinAction;
+                closePin();
+                if (typeof action === 'function') action();
+            } else {
+                document.getElementById('pin-error').classList.remove('hidden');
+            }
+        }
+
+        function openLecturerGate() { openPin(openDashboard); }
+        function requestClearLeaderboard() {
+            openPin(() => {
+                if (confirm("Adakah anda pasti mahu memadamkan semua rekod kuiz OSHA dalam peranti ini?")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    renderLeaderboard();
+                    alert("Semua data kuiz telah dikosongkan.");
+                }
+            });
+        }
+
+        // ================= DASHBOARD PENSYARAH =================
+        function openDashboard() {
+            document.getElementById('dashboard-modal').classList.remove('hidden');
+            showDashTab('stats');
+        }
+
+        function closeDashboard() { document.getElementById('dashboard-modal').classList.add('hidden'); }
+
+        function showDashTab(tab) {
+            ['stats', 'submissions', 'bank'].forEach(t => {
+                const btn = document.getElementById(`dtab-${t}`);
+                if (btn) {
+                    if (t === tab) btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-emerald-600 text-white border-emerald-400';
+                    else btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-slate-800/70 text-slate-300 border-slate-600/50 hover:bg-slate-700';
+                }
+            });
+
+            const body = document.getElementById('dashboard-body');
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+            if (tab === 'stats') {
+                const totalStudents = data.length;
+                const totalAttempts = data.reduce((a, b) => a + (b.attempts || 1), 0);
+                const avgScore = totalStudents ? Math.round(data.reduce((a, b) => a + (b.score || 0), 0) / totalStudents) : 0;
+                const avgMCQ = totalStudents ? (data.reduce((a, b) => a + (b.correct || 0), 0) / totalStudents).toFixed(1) : 0;
+
+                body.innerHTML = `
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-3 text-center">
+                            <div class="text-xl font-extrabold text-emerald-400">${totalStudents}</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Jumlah Pelajar</div>
+                        </div>
+                        <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-3 text-center">
+                            <div class="text-xl font-extrabold text-teal-400">${totalAttempts}</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Jumlah Percubaan</div>
+                        </div>
+                        <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-3 text-center">
+                            <div class="text-xl font-extrabold text-cyan-400">${avgScore}</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Purata Skor</div>
+                        </div>
+                        <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-3 text-center">
+                            <div class="text-xl font-extrabold text-amber-400">${avgMCQ} / 5</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Purata MCQ Betul</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 text-xs leading-relaxed space-y-2">
+                        <h4 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-circle-info text-emerald-400"></i> Maklumat Kuiz DUW10032 (Quiz 1):</h4>
+                        <p>• Mengandungi 5 soalan MCQ (Seksyen 26A, Pindaan 2022, PDCA, Seksyen 29A) dan 3 soalan Struktur (Objektif OSHA, Fungsi SHC, Prosedur Kecemasan).</p>
+                        <p>• Klik tab <b>"Senarai Jawapan Pelajar"</b> untuk menyemak jawapan struktur setiap pelajar.</p>
+                    </div>`;
+            } else if (tab === 'submissions') {
+                if (data.length === 0) {
+                    body.innerHTML = '<div class="text-center text-slate-400 py-8 text-xs">Belum ada rekod penghantaran pelajar.</div>';
+                    return;
+                }
+                body.innerHTML = `
+                    <div class="text-xs text-slate-400 mb-2">Klik butang <b>"Lihat Jawapan"</b> pada mana-mana pelajar untuk menyemak jawapan penuh.</div>
+                    <div class="space-y-2">
+                        ${data.map((e, idx) => `
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs">
+                                <div>
+                                    <div class="font-bold text-white">${escapeHtml(e.name)}</div>
+                                    <div class="text-[11px] text-slate-400">${escapeHtml(e.id)} • Skor: <b class="text-emerald-400">${e.score} pts</b> (${e.correct}/5 MCQ)</div>
+                                </div>
+                                <button onclick="viewStudentDetails(${idx})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center gap-1 transition-all">
+                                    <i class="fa-solid fa-eye"></i> Lihat Jawapan
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            } else if (tab === 'bank') {
+                body.innerHTML = `
+                    <div class="space-y-3">
+                        ${oshaQuizData.map(q => `
+                            <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/60 text-xs space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-emerald-300">Soalan ${q.id} · ${q.topic}</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${q.type === 'subjective' ? 'bg-amber-500/20 text-amber-300' : 'bg-teal-500/20 text-teal-300'}">${q.type.toUpperCase()}</span>
+                                </div>
+                                <div class="text-slate-200">${q.question}</div>
+                                <div class="text-slate-400 text-[11px] pt-1 border-t border-slate-800">${q.rationale}</div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            }
+        }
+
+        function viewStudentDetails(idx) {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const student = data[idx];
+            if (!student || !student.reviewData) {
+                alert("Tiada rekod terperinci bagi pelajar ini.");
+                return;
+            }
+
+            document.getElementById('modal-student-title').innerText = `${student.name} (${student.id}) — Skor: ${student.score} pts`;
+            const content = document.getElementById('modal-student-content');
+            content.innerHTML = student.reviewData.map(r => `
+                <div class="p-3 rounded-xl ${r.type === 'Struktur' ? 'bg-teal-950/20 border border-teal-500/30' : (r.isCorrect ? 'bg-emerald-950/20 border border-emerald-500/30' : 'bg-rose-950/20 border border-rose-500/30')} space-y-1.5">
+                    <div class="font-bold text-emerald-300">${r.qid} · ${r.topic} (${r.type})</div>
+                    <div class="text-slate-200">${r.question}</div>
+                    <div class="pt-1.5 border-t border-white/10">
+                        <span class="text-slate-400 font-semibold">Jawapan Pelajar:</span>
+                        <div class="text-emerald-200 whitespace-pre-wrap mt-0.5">${escapeHtml(r.chosen)}</div>
+                    </div>
+                    <div class="pt-1 border-t border-white/10 text-[11px] text-slate-300">
+                        <span class="text-emerald-400 font-semibold">Skema Rasmi:</span> ${r.rationale}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('student-detail-modal').classList.remove('hidden');
+        }
+
+        function closeStudentDetailModal() {
+            document.getElementById('student-detail-modal').classList.add('hidden');
+        }
+
+        // ================= EKSPORT CSV =================
+        function csvSafe(s) {
+            s = String(s == null ? '' : s);
+            if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+
+        function downloadCSVRows(rows, filename) {
+            const csv = rows.map(r => r.map(csvSafe).join(',')).join('\r\n');
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function downloadCSVReport() {
+            const dateStr = new Date().toLocaleString('ms-MY');
+            const rows = [
+                ['Nama Pelajar', 'No Matrik', 'Mata MCQ', 'MCQ Betul', 'Soalan Struktur Dijawab', 'Jumlah Soalan', 'Tarikh'],
+                [studentName, studentId, score, correctAnswersCount, subjectiveAnswerCount, 8, dateStr]
+            ];
+            downloadCSVRows(rows, `Keputusan_${studentId}_Quiz1_OSHA.csv`);
+        }
+
+        function downloadClassResults() {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (data.length === 0) { alert('Tiada data pelajar lagi.'); return; }
+            const rows = [['No', 'Matrik', 'Nama', 'Skor Tertinggi', 'MCQ Betul (daripada 5)', 'Struktur Dijawab', 'Bilangan Percubaan', 'Tarikh Terakhir']];
+            data.forEach((e, i) => rows.push([i + 1, e.id, e.name, e.score, e.correct, e.subjCount || 3, e.attempts || 1, e.date || '']));
+            downloadCSVRows(rows, `Keputusan_Kelas_DUW10032_Quiz1_OSHA.csv`);
+        }
+
+        function downloadFullSubmissionsLog() {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (data.length === 0) { alert('Tiada data pelajar lagi.'); return; }
+            const rows = [['Matrik', 'Nama', 'Soalan ID', 'Jenis', 'Topik', 'Jawapan Pelajar', 'Status']];
+            data.forEach(e => {
+                if (e.reviewData && Array.isArray(e.reviewData)) {
+                    e.reviewData.forEach(r => {
+                        rows.push([e.id, e.name, r.qid, r.type, r.topic, r.chosen, r.type === 'MCQ' ? (r.isCorrect ? 'Betul' : 'Salah') : 'Struktur']);
+                    });
+                }
+            });
+            downloadCSVRows(rows, `Log_Penuh_Jawapan_DUW10032_Quiz1_OSHA.csv`);
+        }
+
+        // ================= CETAK / PDF KERTAS SOALAN & SKEMA =================
+        function buildPrintHTML() {
+            let paper = '';
+            let key = '';
+
+            oshaQuizData.forEach((q, i) => {
+                const num = i + 1;
+                if (q.type === 'mcq') {
+                    const opts = Object.entries(q.options).map(([k, v]) =>
+                        `<div class="opt"><b>${k}.</b> ${v.en} ${v.ms && v.ms !== v.en ? `<span class="ms">/ ${v.ms}</span>` : ''}</div>`
+                    ).join('');
+                    paper += `<div class="q"><div class="qn"><b>${num}.</b> [${q.topic}]<br>${q.question}</div>${opts}</div>`;
+                    key += `<div class="k"><b>${num}.</b> Jawapan: <b>${q.answer}</b> — ${q.rationale}</div>`;
+                } else {
+                    paper += `<div class="q"><div class="qn"><b>${num}.</b> [${q.topic} — SOALAN STRUKTUR]<br>${q.question}</div><div class="subj-lines">Ruang Jawapan:<br><br><br><br><br></div></div>`;
+                    key += `<div class="k"><b>${num}.</b> <b>SOALAN STRUKTUR:</b><br>${q.rationale}</div>`;
+                }
+            });
+
+            return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>DUW10032 OSH — Quiz 1 (S1 2025/2026)</title>`
+                + `<style>body{font-family:Arial,sans-serif;color:#111;margin:24px;line-height:1.45;}h1{font-size:18px;margin-bottom:4px;}h2{font-size:14px;border-bottom:2px solid #333;padding-bottom:4px;margin-top:20px;}.q{margin:14px 0;page-break-inside:avoid;}.qn{font-size:13px;margin-bottom:5px;}.opt{font-size:12px;margin:2px 0 2px 18px;}.ms{color:#555;font-style:italic;}.k{font-size:12px;margin:8px 0;border-bottom:1px dashed #ccc;padding-bottom:6px;}.key-section{page-break-before:always;}.subj-lines{margin:8px 0 12px 18px;border:1px dashed #999;padding:10px;height:80px;color:#777;font-size:11px;}@media print{.noprint{display:none;}}</style>`
+                + `</head><body>`
+                + `<div class="noprint" style="margin-bottom:15px;"><button onclick="window.print()" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Cetak / Simpan sebagai PDF</button></div>`
+                + `<h1>JABATAN PENDIDIKAN POLITEKNIK DAN KOLEJ KOMUNITI</h1>`
+                + `<h3>DUW10032 OCCUPATIONAL SAFETY AND HEALTH — QUIZ 1 (SESI 1 2025/2026)</h3>`
+                + `<h2>KERTAS SOALAN (5 MCQ + 3 STRUKTUR)</h2>${paper}`
+                + `<div class="key-section"><h2>SKEMA PEMARKAHAN &amp; JAWAPAN LENGKAP</h2>${key}</div>`
+                + `<scr` + `ipt>window.addEventListener('load',function(){setTimeout(function(){window.print();},500);});</scr` + `ipt>`
+                + `</body></html>`;
+        }
+
+        function printQuestions() {
+            const w = window.open('', '_blank');
+            if (!w) { alert('Sila benarkan pop-up browser untuk mencetak PDF.'); return; }
+            w.document.open(); w.document.write(buildPrintHTML()); w.document.close();
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // ================= LATAR 3D THREE.JS =================
+        function init3DBackground() {
+            if (typeof THREE === 'undefined') return;
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const canvas = document.getElementById('bg-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 60;
+
+            const count = 850;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 200;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.7, color: 0x10b981, transparent: true, opacity: 0.8 }));
+            scene.add(points);
+
+            const rings = [];
+            const ringColors = [0x10b981, 0x14b8a6, 0x06b6d4];
+            for (let i = 0; i < 3; i++) {
+                const t = new THREE.Mesh(new THREE.TorusGeometry(10 + i * 4, 0.25, 12, 80),
+                    new THREE.MeshBasicMaterial({ color: ringColors[i], transparent: true, opacity: 0.4 }));
+                t.rotation.x = Math.random() * Math.PI;
+                t.rotation.y = Math.random() * Math.PI;
+                scene.add(t); rings.push(t);
+            }
+
+            let mx = 0, my = 0;
+            window.addEventListener('pointermove', (e) => {
+                mx = (e.clientX / window.innerWidth - 0.5);
+                my = (e.clientY / window.innerHeight - 0.5);
+            });
+            function onResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight, false);
+            }
+            window.addEventListener('resize', onResize);
+            onResize();
+
+            (function animate() {
+                requestAnimationFrame(animate);
+                points.rotation.y += 0.0008;
+                points.rotation.x += 0.0003;
+                rings.forEach((r, i) => { r.rotation.x += 0.004 + i * 0.001; r.rotation.y += 0.006; });
+                camera.position.x += (mx * 20 - camera.position.x) * 0.03;
+                camera.position.y += (-my * 20 - camera.position.y) * 0.03;
+                camera.lookAt(scene.position);
+                renderer.render(scene, camera);
+            })();
+        }
+
+        window.onload = function() {
+            init3DBackground();
+
+            if (typeof VanillaTilt !== 'undefined' && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+                VanillaTilt.init(document.querySelectorAll('#registration-screen'), { max: 4, speed: 400, glare: true, 'max-glare': 0.12, scale: 1.01 });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                const quizActive = !document.getElementById('quiz-screen').classList.contains('hidden');
+                const feedbackOpen = !document.getElementById('feedback-modal').classList.contains('hidden');
+                if (feedbackOpen && e.key === 'Enter') { nextQuestion(); return; }
+                if (!quizActive || feedbackOpen) return;
+
+                const q = currentQuizData[currentQuestionIndex];
+                if (!q || q.type !== 'mcq') return;
+
+                let key = null;
+                if (/^[a-dA-D]$/.test(e.key)) key = e.key.toUpperCase();
+                else if (/^[1-4]$/.test(e.key)) key = ['A', 'B', 'C', 'D'][parseInt(e.key, 10) - 1];
+                if (key && q.optionsList && q.optionsList.some(o => o.key === key)) selectOption(key);
+                else if (e.key === 'Enter' && !document.getElementById('submit-btn').disabled) submitAnswer();
+            });
+        };
+    </script>
+</body>
+</html>
