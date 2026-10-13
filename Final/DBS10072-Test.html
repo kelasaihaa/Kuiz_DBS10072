@@ -69,7 +69,7 @@
         </div>
 
         <main class="max-w-4xl mx-auto px-4 py-8 relative">
-            <form id="borang-ujian" class="space-y-8 w-full">
+            <form id="borang-ujian" novalidate class="space-y-8 w-full">
                 
                 <div id="bahagian-maklumat-calon" class="bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm hidden">
                     <h3 class="text-lg font-bold text-blue-800 mb-4">Maklumat Calon</h3>
@@ -96,6 +96,16 @@
                 </div>
             </form>
         </main>
+    </div>
+
+    <!-- MODAL PENGESAHAN HANTAR (TANPA KELUAR FULLSCREEN / TANPA TRIGGER BLUR) -->
+    <div id="modalSahkanHantar" class="hidden fixed inset-0 bg-slate-900/80 z-[9000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white max-w-md w-full rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center">
+            <div id="ikonModalHantar" class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4 text-3xl font-bold">?</div>
+            <h3 id="tajukModalHantar" class="text-xl sm:text-2xl font-extrabold text-slate-800 mb-2">Sahkan Penghantaran</h3>
+            <p id="mesejModalHantar" class="text-slate-600 text-sm sm:text-base mb-6 leading-relaxed"></p>
+            <div id="butangModalHantar" class="flex flex-col sm:flex-row gap-3 justify-center"></div>
+        </div>
     </div>
 
     <!-- SKRIN STATUS -->
@@ -297,6 +307,7 @@
         }
 
         window.addEventListener('blur', triggerWarning);
+        window.addEventListener('pagehide', triggerWarning);
         document.addEventListener('visibilitychange', function() {
             if (document.hidden || document.visibilityState === 'hidden') triggerWarning();
         });
@@ -433,8 +444,6 @@
                 ruang.innerHTML = `<iframe src="${config.urlMoodle}"></iframe>`;
             } else {
                 document.getElementById('bahagian-maklumat-calon').classList.remove('hidden');
-                document.getElementById('inputNama').setAttribute('required', 'true');
-                document.getElementById('inputMatrik').setAttribute('required', 'true');
                 document.getElementById('ruang-hantar').classList.remove('hidden');
                 
                 let html = '';
@@ -448,7 +457,7 @@
                         const inputName = soalan.name; 
                         
                         html += `
-                        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mt-6 relative">
+                        <div id="kad-soalan-${inputName}" class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mt-6 relative transition-all">
                             <h3 class="text-lg font-bold text-slate-800 mb-4 whitespace-pre-wrap"><span class="text-blue-600 mr-2">${noSoalan}.</span>${soalan.teks}</h3>
                         `;
                         
@@ -458,18 +467,17 @@
                                 const id = `s_${index}_p_${i}`;
                                 html += `
                                 <label for="${id}" class="flex items-start p-3 border border-slate-200 rounded-xl hover:bg-blue-50 cursor-pointer transition">
-                                    <input type="radio" id="${id}" name="${inputName}" value="${pilihanValue}" class="w-5 h-5 text-blue-600 mt-0.5" required>
+                                    <input type="radio" id="${id}" name="${inputName}" value="${pilihanValue}" class="w-5 h-5 text-blue-600 mt-0.5">
                                     <span class="ml-3 text-slate-700 font-medium">${pilihanValue}</span>
                                 </label>`;
                             });
                             html += `</div>`;
                         } else if (soalan.jenis === 'subjektif') {
-                            // Masukkan logik had aksara untuk teks input
                             let maxAttr = soalan.hadAksara ? `maxlength="${soalan.hadAksara}"` : '';
                             let kaunterHtml = soalan.hadAksara ? `<div class="text-right text-sm text-gray-500 mt-2 font-medium"><span id="kiraan-${inputName}">0</span> / ${soalan.hadAksara} aksara</div>` : '';
                             
                             html += `
-                            <textarea name="${inputName}" id="ta_${inputName}" ${maxAttr} rows="5" class="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-base" placeholder="Taip jawapan..." required></textarea>
+                            <textarea name="${inputName}" id="ta_${inputName}" ${maxAttr} rows="5" class="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-base" placeholder="Taip jawapan..."></textarea>
                             ${kaunterHtml}`;
                         }
                         html += `</div>`;
@@ -479,7 +487,6 @@
                 }
                 ruang.innerHTML = html;
 
-                // Tambah event listener untuk kiraan aksara LIVE secara automatik selepas render
                 if(config.senaraiSoalan && config.senaraiSoalan.length > 0) {
                     config.senaraiSoalan.forEach((soalan) => {
                         if (soalan.jenis === 'subjektif' && soalan.hadAksara) {
@@ -534,10 +541,95 @@
             }, 1000);
         }
 
+        function tutupModalHantar() {
+            document.getElementById('modalSahkanHantar').classList.add('hidden');
+        }
+
+        function semakDanSahkanHantar() {
+            const namaEl = document.getElementById('inputNama');
+            const matrikEl = document.getElementById('inputMatrik');
+            const infoBox = document.getElementById('bahagian-maklumat-calon');
+            const modal = document.getElementById('modalSahkanHantar');
+            const ikon = document.getElementById('ikonModalHantar');
+            const tajuk = document.getElementById('tajukModalHantar');
+            const mesej = document.getElementById('mesejModalHantar');
+            const ruangButang = document.getElementById('butangModalHantar');
+
+            // Reset highlight
+            infoBox.classList.remove('ring-4', 'ring-red-400');
+            if (config.senaraiSoalan) {
+                config.senaraiSoalan.forEach(s => {
+                    const kad = document.getElementById(`kad-soalan-${s.name}`);
+                    if (kad) kad.classList.remove('ring-4', 'ring-red-400');
+                });
+            }
+
+            if (!namaEl.value.trim() || !matrikEl.value.trim()) {
+                infoBox.classList.add('ring-4', 'ring-red-400');
+                infoBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                ikon.className = 'w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 text-3xl font-bold';
+                ikon.innerText = '!';
+                tajuk.innerText = 'Maklumat Calon Belum Lengkap';
+                mesej.innerText = 'Sila isi Nama Penuh dan No. Matrik / MyKad anda di bahagian atas kertas ujian sebelum menghantar.';
+                ruangButang.innerHTML = `<button type="button" onclick="tutupModalHantar()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl w-full">Isi Maklumat Sekarang</button>`;
+                modal.classList.remove('hidden');
+                return;
+            }
+
+            let belumDijawab = [];
+            let kadPertama = null;
+
+            if (config.senaraiSoalan && config.senaraiSoalan.length > 0) {
+                config.senaraiSoalan.forEach((soalan, index) => {
+                    const noSoalan = index + 1;
+                    let dijawab = false;
+                    if (soalan.jenis === 'objektif') {
+                        const checked = document.querySelector(`input[name="${soalan.name}"]:checked`);
+                        if (checked) dijawab = true;
+                    } else {
+                        const ta = document.getElementById(`ta_${soalan.name}`);
+                        if (ta && ta.value.trim() !== '') dijawab = true;
+                    }
+                    if (!dijawab) {
+                        belumDijawab.push(noSoalan);
+                        const kad = document.getElementById(`kad-soalan-${soalan.name}`);
+                        if (kad) {
+                            kad.classList.add('ring-4', 'ring-red-400');
+                            if (!kadPertama) kadPertama = kad;
+                        }
+                    }
+                });
+            }
+
+            if (belumDijawab.length > 0) {
+                if (kadPertama) kadPertama.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                ikon.className = 'w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4 text-3xl font-bold';
+                ikon.innerText = '!';
+                tajuk.innerText = 'Ada Soalan Belum Dijawab';
+                mesej.innerHTML = `Anda belum menjawab <b>Soalan ${belumDijawab.join(', ')}</b>.<br>Adakah anda mahu kembali melengkapkan jawapan atau teruskan menghantar?`;
+                ruangButang.innerHTML = `
+                    <button type="button" onclick="tutupModalHantar()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl flex-1">Kembali Lengkapkan</button>
+                    <button type="button" onclick="tutupModalHantar(); hantarBorang();" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-6 py-3 rounded-xl flex-1">Hantar Juga</button>
+                `;
+                modal.classList.remove('hidden');
+                return;
+            }
+
+            ikon.className = 'w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-4 text-3xl font-bold';
+            ikon.innerText = '✓';
+            tajuk.innerText = 'Sahkan Penghantaran Jawapan';
+            mesej.innerText = 'Semua soalan telah dijawab. Adakah anda pasti mahu menghantar jawapan anda sekarang?';
+            ruangButang.innerHTML = `
+                <button type="button" onclick="tutupModalHantar()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-6 py-3 rounded-xl flex-1">Semak Semula</button>
+                <button type="button" onclick="tutupModalHantar(); hantarBorang();" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl flex-1">Ya, Hantar Sekarang</button>
+            `;
+            modal.classList.remove('hidden');
+        }
+
         document.getElementById('borang-ujian').addEventListener('submit', function(e) {
             e.preventDefault();
             if(config.platform === 'gsheets') {
-                if(confirm("Pasti mahu hantar sekarang?")) hantarBorang();
+                semakDanSahkanHantar();
             }
         });
 
@@ -554,18 +646,40 @@
             skrinStatus.classList.remove('hidden');
             skrinStatus.classList.add('flex');
             document.getElementById('statusLoading').classList.remove('hidden');
+
+            try {
+                if (document.fullscreenElement && document.exitFullscreen) {
+                    document.exitFullscreen().catch(()=>{});
+                }
+            } catch (e) {}
             
             const formData = new FormData(borang);
             const urlEncodedData = new URLSearchParams(formData);
 
             if (config.urlSheets && config.urlSheets.startsWith("http")) {
+                let sudahPapar = false;
+                const selesai = (msg) => {
+                    if (sudahPapar) return;
+                    sudahPapar = true;
+                    paparKejayaan(msg);
+                };
+                const timerTimeout = setTimeout(() => {
+                    selesai("Jawapan anda telah dihantar dan direkodkan.");
+                }, 8000);
+
                 fetch(config.urlSheets, {
                     method: 'POST',
                     mode: 'no-cors',
+                    keepalive: true,
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: urlEncodedData.toString()
-                }).then(() => paparKejayaan("Jawapan anda berjaya direkodkan ke pangkalan data peperiksaan."))
-                  .catch(err => { alert("Ralat Rangkaian."); paparKejayaan("Berlaku ralat rangkaian, namun sesi ditamatkan."); });
+                }).then(() => {
+                    clearTimeout(timerTimeout);
+                    selesai("Jawapan anda berjaya direkodkan ke pangkalan data peperiksaan.");
+                }).catch(err => {
+                    clearTimeout(timerTimeout);
+                    selesai("Berlaku ralat rangkaian, namun sesi ditamatkan.");
+                });
             } else {
                 setTimeout(() => paparKejayaan("Jawapan anda berjaya direkodkan ke pangkalan data peperiksaan."), 1500);
             }
