@@ -1166,8 +1166,13 @@
 
         // ================= GERBANG PIN PENSYARAH =================
         async function sha256Hex(str) {
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            try {
+                if (window.crypto && crypto.subtle) {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+                    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch (e) {}
+            return '';
         }
 
         function openPin(action) {
@@ -1181,7 +1186,7 @@
         function closePin() { document.getElementById('pin-modal').classList.add('hidden'); }
 
         async function submitPin() {
-            const val = document.getElementById('pin-input').value;
+            const val = document.getElementById('pin-input').value.trim();
             const hash = await sha256Hex(PIN_SALT + val);
             if (hash === PIN_HASH || val === "1234") {
                 const action = pendingPinAction;
