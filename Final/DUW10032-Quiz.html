@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DUW10032 - QUIZ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .unselectable { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-touch-callout: none; }
+        @media print { body { display: none !important; } }
+        iframe { width: 100%; min-height: 800px; border: none; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen unselectable">
+
+
+
+    <!-- OVERLAY AMARAN MENIRU -->
+    <div id="cheat-overlay" class="fixed inset-0 bg-gray-900/98 z-[99999] flex-col justify-center items-center hidden text-center p-6 backdrop-blur-xl">
+        <svg class="w-24 h-24 sm:w-32 sm:h-32 text-red-500 mb-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-white mb-4 uppercase tracking-wider">Amaran Keselamatan!</h1>
+        <p class="text-gray-200 text-lg sm:text-xl max-w-2xl leading-relaxed">Sistem mendapati anda telah keluar dari skrin ujian atau cuba menggunakan fungsi yang dilarang.</p>
+        <div class="mt-6 bg-red-900 text-red-200 p-4 rounded-lg border border-red-500 max-w-lg">
+            <p class="font-bold uppercase">Kesalahan Direkodkan!</p>
+            <p class="text-sm mt-1">Sistem sedang merakam tindakan anda. Sila kembali ke ujian segera sebelum kertas dibatalkan.</p>
+        </div>
+        <button onclick="resumeTest()" class="mt-8 text-white text-lg font-bold border-2 border-red-500 px-8 py-4 rounded-xl bg-red-600 shadow-[0_0_25px_rgba(220,38,38,0.7)] hover:bg-red-500 transition-transform active:scale-95 uppercase tracking-wide">
+            Kembali Ke Ujian
+        </button>
+    </div>
+
+    <!-- SKRIN ARAHAN -->
+    <div id="skrinArahan" class="max-w-3xl mx-auto mt-10 p-6 sm:p-10 bg-white sm:rounded-xl shadow-lg">
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 border-b pb-4">Arahan Ujian</h2>
+        <div class="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <p class="text-lg font-bold text-blue-800">Nama Ujian: <span class="font-normal text-gray-700">DUW10032 - QUIZ</span></p>
+        </div>
+        <div class="space-y-4 mb-8">
+            <label class="flex items-start space-x-4 cursor-pointer p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border">
+                <input type="checkbox" class="arahan-checkbox form-checkbox h-6 w-6 text-blue-600 mt-1 rounded">
+                <span class="text-gray-700 font-medium text-sm sm:text-base">Saya faham ujian ini dipantau. Sistem akan mengaburkan skrin dan merakam amaran jika saya cuba menipu, menukar tab, atau mengambil tangkap layar.</span>
+            </label>
+            <label class="flex items-start space-x-4 cursor-pointer p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border">
+                <input type="checkbox" class="arahan-checkbox form-checkbox h-6 w-6 text-blue-600 mt-1 rounded">
+                <span class="text-gray-700 font-medium text-sm sm:text-base">Saya bersetuju membenarkan sistem berjalan dalam mod <strong>Skrin Penuh (Fullscreen)</strong>. Menekan butang ESC atau keluar dari skrin penuh akan direkodkan sebagai kesalahan.</span>
+            </label>
+        </div>
+        <div class="flex justify-end border-t pt-6">
+            <button id="butangMula" disabled="" class="bg-gray-400 w-full sm:w-auto cursor-not-allowed text-white font-bold py-4 px-8 rounded-xl shadow-md transition text-lg uppercase">
+                Mula Ujian Sekarang
+            </button>
+        </div>
+    </div>
+
+    <!-- SKRIN UJIAN -->
+    <div id="skrinUjian" class="hidden">
+        <div class="sticky top-0 bg-blue-800 text-white shadow-lg z-40">
+            <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center gap-4">
+                <h1 class="font-bold text-lg truncate w-1/2">DUW10032 - QUIZ</h1>
+                <div class="flex items-center gap-3 justify-end w-1/2">
+                    <div id="kotakAmaran" class="hidden bg-black text-red-500 border-2 border-red-600 px-3 py-1 rounded-lg font-black text-lg sm:text-2xl shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse transition-all">
+                        ⚠️ <span class="hidden sm:inline">KESALAHAN:</span> <span id="paparanAmaran">0</span>
+                    </div>
+                    <div id="paparan-masa" class="bg-white text-red-600 font-mono font-bold text-2xl px-4 py-2 rounded shadow-inner min-w-[90px] text-center border-2 border-red-200">
+                        --:--
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-4xl mx-auto px-4 py-8 relative">
+            <form id="borang-ujian" class="space-y-8 w-full">
+                
+                <div id="bahagian-maklumat-calon" class="bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm hidden">
+                    <h3 class="text-lg font-bold text-blue-800 mb-4">Maklumat Calon</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Nama Penuh:</label>
+                            <input type="text" name="Nama" id="inputNama" class="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-base">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">No. Matrik / MyKad:</label>
+                            <input type="text" name="Matrik" id="inputMatrik" class="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-base">
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="Jumlah_Amaran" id="input_amaran" value="0">
+
+                <div id="ruang-soalan" class="w-full"></div>
+                
+                <div id="ruang-hantar" class="pt-8 border-t border-slate-300 flex justify-end hidden">
+                    <button type="submit" id="btn-hantar" class="bg-green-600 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-md hover:bg-green-700 transition uppercase w-full sm:w-auto">
+                        Hantar Jawapan
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- SKRIN STATUS -->
+    <div id="skrinStatus" class="hidden fixed inset-0 bg-white z-50 flex-col justify-center items-center p-6 text-center">
+        <div id="statusLoading" class="hidden">
+            <svg class="animate-spin h-16 w-16 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <h2 class="text-2xl font-bold text-gray-800">Menghantar Data...</h2>
+        </div>
+        <div id="statusBerjaya" class="hidden max-w-2xl">
+            <svg class="w-24 h-24 text-green-500 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Ujian Tamat!</h2>
+            <p id="mesejTamat" class="text-gray-600 text-lg mb-6">Masa telah tamat atau jawapan telah dihantar.</p>
+            <div id="laporanPenipuan" class="p-6 rounded-xl border-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const config = {
+            namaUjian: "DUW10032-Quiz",
+            platform: "gsheets",
+            masaMinit: parseInt("30"),
+            masaSaat: parseInt("0"),
+            urlSheets: "https://script.google.com/macros/s/AKfycbwG44SVDKyeMh-ibClUBWBykirUhHpygG7xSXJhPd8DhM_debzzhLQr0gCYJsHZhDWn/exec",
+            urlGform: decodeURIComponent(""),
+            urlMoodle: "",
+            senaraiSoalan: [
+    {
+        "jenis": "objektif",
+        "teks": "1. The Occupational Safety and Health Act (OSHA) 1994 (Act 514) was enacted based on which underlying legislative philosophy?\n\na.    Total Enforcement Principle, focusing solely on penalties.\nb.    Ministerial Oversight Principle, relying on the Minister’s direct supervision.\nc.    Command and Control Concept, where the government manages all operational risks.\nd.    Self-Regulation Concept, where the responsibility for safety and health primarily rests with those who create and work with the risks.",
+        "name": "SO01",
+        "pilihan": [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]
+    },
+    {
+        "jenis": "objektif",
+        "teks": "2. Section 26A (New) of the OSH Act grants an employee the right to remove himself from danger. This right is only granted if the employee has informed the employer of a specific condition, and the employer subsequently fails to act. What is this triggering condition?\n\na.    An imminent danger.\nb.    Exposure to risks arising from work activities.\nc.    Any risk identified by the Safety and Health Committee.\nd.    Any unresolved safety complaint filed in the previous meeting.",
+        "name": "SO02",
+        "pilihan": [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]
+    },
+    {
+        "jenis": "objektif",
+        "teks": "3. Following the 2022 amendments, what is the maximum fine for an employer or principal found guilty of an offence under the general duties sections, specifically Sections 15, 16, 17, 18, 18A, or 18B?\n\na.    Fine not exceeding fifty thousand ringgit (previous penalty).\nb.    Fine not exceeding five hundred thousand ringgit.\nc.    Fine not exceeding two thousand ringgit (employee penalty Section 24).\nd.    Fine not exceeding one hundred thousand ringgit (general penalty Section 51).",
+        "name": "SO03",
+        "pilihan": [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]
+    },
+    {
+        "jenis": "objektif",
+        "teks": "4. An Occupational Safety and Health Management System (OSHMS) is often structured using the Deming Wheel (Plan-Do-Check-Act or PDCA cycle). Which of the following components represents the \"Policy and Organizing\" element of the cycle?\n\na.    Evaluation of OSH performance.\nb.    Action for Improvement based on audit findings.\nc.    Recognizing and removing or minimizing dangers through HIRARC.\nd.    Commitment to a safe workplace through establishing and communicating the OSH Policy.",
+        "name": "SO04",
+        "pilihan": [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]
+    },
+    {
+        "jenis": "objektif",
+        "teks": "5. The Occupational Safety and Health (Amendment) Act 2022 introduced the requirement for an OSH Coordinator (Section 29A). What is the minimum threshold of employees that triggers the employer’s duty to appoint an OSH Coordinator?\n\na.    Ten or more employees.\nb.    Five or more employees.\nc.    Twenty or more employees.\nd.    Forty or more employees (SHC requirement).",
+        "name": "SO05",
+        "pilihan": [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]
+    },
+    {
+        "jenis": "subjektif",
+        "teks": "6. The Occupational Safety and Health Act (OSHA) 1994 (Act 514) was established with four main objectives. List and briefly explain any three (3) of these objectives.",
+        "name": "SS01",
+        "hadAksara": 650
+    },
+    {
+        "jenis": "subjektif",
+        "teks": "7. The Safety and Health Committee (SHC) plays a crucial role in promoting OSH cooperation. Outline three (3) specific functions that the SHC is responsible for performing at the place of work.",
+        "name": "SS02",
+        "hadAksara": 650
+    },
+    {
+        "jenis": "subjektif",
+        "teks": "8. Section 15(2)(f) of the OSH Act 1994, as amended in 2022, emphasizes the employer’s duty to develop and implement procedures for dealing with emergencies. Describe two (2) critical requirements or steps that management should undertake when establishing effective Emergency Procedures (SOPs).",
+        "name": "SS03",
+        "hadAksara": 650
+    }
+]
+        };
+
+        const storageKey = 'proctor_sesi_' + encodeURIComponent(config.namaUjian);
+        let masaBerbaki = (config.masaMinit * 60) + config.masaSaat;
+        let timerInterval;
+        let cheatCount = 0;
+        let ujianTamat = false;
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('copy', e => { e.preventDefault(); try{navigator.clipboard.writeText('TINDAKAN MENIRU DIKESAN!');}catch(e){} });
+        document.addEventListener('cut', e => e.preventDefault());
+        document.addEventListener('paste', e => e.preventDefault());
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i'))) { e.preventDefault(); }
+            if (e.ctrlKey && (e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S')) { e.preventDefault(); }
+        });
+
+        function triggerWarning() {
+            if (ujianTamat || document.getElementById('skrinUjian').classList.contains('hidden')) return;
+            const overlay = document.getElementById('cheat-overlay');
+            
+            if (overlay.style.display !== 'flex') {
+                cheatCount++;
+                document.getElementById('paparanAmaran').innerText = cheatCount;
+                document.getElementById('kotakAmaran').classList.remove('hidden');
+                document.getElementById('input_amaran').value = cheatCount;
+                
+                overlay.style.display = 'flex';
+                try { navigator.clipboard.writeText('AMARAN: ANDA TELAH MELANGGAR PERATURAN PEPERIKSAAN!'); } catch(err) {}
+            }
+        }
+
+        window.addEventListener('blur', triggerWarning);
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden || document.visibilityState === 'hidden') triggerWarning();
+        });
+        window.addEventListener('keyup', function(e) {
+            if (e.key === 'PrintScreen' || e.keyCode === 44) { e.preventDefault(); triggerWarning(); }
+        });
+
+        // Pantau jika pelajar cuba keluar dari mod Skrin Penuh (Tekan ESC)
+        function semakFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                if (!ujianTamat && !document.getElementById('skrinUjian').classList.contains('hidden')) {
+                    triggerWarning(); // Catat sebagai kesalahan
+                }
+            }
+        }
+        document.addEventListener('fullscreenchange', semakFullscreen);
+        document.addEventListener('webkitfullscreenchange', semakFullscreen);
+        document.addEventListener('msfullscreenchange', semakFullscreen);
+
+        function resumeTest() {
+            document.getElementById('cheat-overlay').style.display = 'none';
+            // Paksa masuk Skrin Penuh semula selepas amaran penipuan
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen().catch(e=>{}); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+        }
+
+        const cbArahan = document.querySelectorAll('.arahan-checkbox');
+        const btnMula = document.getElementById('butangMula');
+        
+        cbArahan.forEach(cb => {
+            cb.addEventListener('change', () => {
+                if(Array.from(cbArahan).every(c => c.checked)) {
+                    btnMula.disabled = false;
+                    btnMula.classList.replace('bg-gray-400', 'bg-blue-600');
+                    btnMula.classList.replace('cursor-not-allowed', 'hover:bg-blue-700');
+                } else {
+                    btnMula.disabled = true;
+                    btnMula.classList.replace('bg-blue-600', 'bg-gray-400');
+                    btnMula.classList.replace('hover:bg-blue-700', 'cursor-not-allowed');
+                }
+            });
+        });
+
+        btnMula.addEventListener('click', () => {
+            // Aktifkan Skrin Penuh Automatik bila butang mula ditekan
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen().catch(e=>{}); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+            else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+
+            document.getElementById('skrinArahan').classList.add('hidden');
+            document.getElementById('skrinUjian').classList.remove('hidden');
+            renderBorang();
+            muatJawapanPelajar();
+            mulakanMasa();
+            
+            // Auto-simpan sesi pelajar ke dalam browser (Auto-Recover)
+            setInterval(simpanJawapanPelajar, 3000);
+            if (config.platform === 'gsheets') {
+                document.getElementById('borang-ujian').addEventListener('input', simpanJawapanPelajar);
+            }
+        });
+
+        // FUNGSI SIMPAN SESI PELAJAR
+        function simpanJawapanPelajar() {
+            if (ujianTamat) return;
+            let data = {
+                _masaBerbaki: masaBerbaki,
+                _cheatCount: cheatCount
+            };
+            
+            if (config.platform === 'gsheets') {
+                const borang = document.getElementById('borang-ujian');
+                const formData = new FormData(borang);
+                const borangData = Object.fromEntries(formData.entries());
+                data = { ...data, ...borangData };
+            }
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+
+        // FUNGSI MUAT SEMULA SESI PELAJAR
+        function muatJawapanPelajar() {
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    
+                    if (data._masaBerbaki !== undefined && data._masaBerbaki > 0) {
+                        masaBerbaki = data._masaBerbaki;
+                    }
+                    
+                    if (data._cheatCount !== undefined && data._cheatCount > 0) {
+                        cheatCount = data._cheatCount;
+                        document.getElementById('paparanAmaran').innerText = cheatCount;
+                        document.getElementById('input_amaran').value = cheatCount;
+                        document.getElementById('kotakAmaran').classList.remove('hidden');
+                    }
+
+                    if (config.platform === 'gsheets') {
+                        for (const key in data) {
+                            if (key.startsWith('_')) continue;
+                            const input = document.querySelector(`[name="${key}"]`);
+                            if (input) {
+                                if (input.type === 'radio') {
+                                    const radio = document.querySelector(`[name="${key}"][value="${data[key]}"]`);
+                                    if (radio) radio.checked = true;
+                                } else {
+                                    input.value = data[key];
+                                    input.dispatchEvent(new Event('input')); // Cetuskan pengiraan aksara
+                                }
+                            }
+                        }
+                    }
+
+                    // Tunjuk notifikasi pemulihan berjaya
+                    const notice = document.createElement('div');
+                    notice.className = 'bg-indigo-100 text-indigo-800 p-3 rounded-xl mb-6 text-sm font-bold text-center border border-indigo-300 animate-pulse w-full mx-auto';
+                    notice.innerText = '🔄 Sesi dipulihkan. Masa dan jawapan (bagi mod Sheets) anda sebelum ini telah dikembalikan.';
+                    document.getElementById('ruang-soalan').parentElement.prepend(notice);
+                    setTimeout(() => notice.remove(), 6000);
+                    
+                } catch (e) {
+                    console.error("Gagal memuatkan sesi pelajar.", e);
+                }
+            }
+        }
+
+        function renderBorang() {
+            const ruang = document.getElementById('ruang-soalan');
+            if (config.platform === 'gform') {
+                ruang.innerHTML = config.urlGform;
+            } else if (config.platform === 'moodle') {
+                ruang.innerHTML = `<iframe src="${config.urlMoodle}"></iframe>`;
+            } else {
+                document.getElementById('bahagian-maklumat-calon').classList.remove('hidden');
+                document.getElementById('inputNama').setAttribute('required', 'true');
+                document.getElementById('inputMatrik').setAttribute('required', 'true');
+                document.getElementById('ruang-hantar').classList.remove('hidden');
+                
+                let html = '';
+                
+                if(config.senaraiSoalan && config.senaraiSoalan.length > 0) {
+                    const senaraiKod = config.senaraiSoalan.map(s => s.name).join(',');
+                    html += `<input type="hidden" name="Senarai_Soalan" value="${senaraiKod}">`;
+
+                    config.senaraiSoalan.forEach((soalan, index) => {
+                        const noSoalan = index + 1;
+                        const inputName = soalan.name; 
+                        
+                        html += `
+                        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mt-6 relative">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 whitespace-pre-wrap"><span class="text-blue-600 mr-2">${noSoalan}.</span>${soalan.teks}</h3>
+                        `;
+                        
+                        if (soalan.jenis === 'objektif') {
+                            html += `<div class="space-y-3 pl-2 sm:pl-6">`;
+                            soalan.pilihan.forEach((pilihanValue, i) => {
+                                const id = `s_${index}_p_${i}`;
+                                html += `
+                                <label for="${id}" class="flex items-start p-3 border border-slate-200 rounded-xl hover:bg-blue-50 cursor-pointer transition">
+                                    <input type="radio" id="${id}" name="${inputName}" value="${pilihanValue}" class="w-5 h-5 text-blue-600 mt-0.5" required>
+                                    <span class="ml-3 text-slate-700 font-medium">${pilihanValue}</span>
+                                </label>`;
+                            });
+                            html += `</div>`;
+                        } else if (soalan.jenis === 'subjektif') {
+                            // Masukkan logik had aksara untuk teks input
+                            let maxAttr = soalan.hadAksara ? `maxlength="${soalan.hadAksara}"` : '';
+                            let kaunterHtml = soalan.hadAksara ? `<div class="text-right text-sm text-gray-500 mt-2 font-medium"><span id="kiraan-${inputName}">0</span> / ${soalan.hadAksara} aksara</div>` : '';
+                            
+                            html += `
+                            <textarea name="${inputName}" id="ta_${inputName}" ${maxAttr} rows="5" class="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-base" placeholder="Taip jawapan..." required></textarea>
+                            ${kaunterHtml}`;
+                        }
+                        html += `</div>`;
+                    });
+                } else {
+                    html = `<div class="p-6 text-center text-gray-500">Tiada soalan dibina.</div>`;
+                }
+                ruang.innerHTML = html;
+
+                // Tambah event listener untuk kiraan aksara LIVE secara automatik selepas render
+                if(config.senaraiSoalan && config.senaraiSoalan.length > 0) {
+                    config.senaraiSoalan.forEach((soalan) => {
+                        if (soalan.jenis === 'subjektif' && soalan.hadAksara) {
+                            const textareaEl = document.getElementById(`ta_${soalan.name}`);
+                            const kaunterEl = document.getElementById(`kiraan-${soalan.name}`);
+                            if (textareaEl && kaunterEl) {
+                                textareaEl.addEventListener('input', function() {
+                                    let panjangSemasa = this.value.length;
+                                    kaunterEl.innerText = panjangSemasa;
+                                    if(panjangSemasa >= soalan.hadAksara) {
+                                        kaunterEl.parentElement.classList.add('text-red-600', 'font-bold');
+                                    } else {
+                                        kaunterEl.parentElement.classList.remove('text-red-600', 'font-bold');
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        function formatMasa(saatTotal) {
+            let m = Math.floor(saatTotal / 60);
+            let s = saatTotal % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function mulakanMasa() {
+            const paparanMasa = document.getElementById('paparan-masa');
+            paparanMasa.innerText = formatMasa(masaBerbaki);
+            
+            timerInterval = setInterval(() => {
+                if(masaBerbaki <= 0) {
+                    clearInterval(timerInterval);
+                    if (config.platform === 'gsheets') { hantarBorang(); } 
+                    else {
+                        ujianTamat = true;
+                        document.getElementById('skrinUjian').classList.add('hidden');
+                        paparKejayaan("Masa telah tamat. Sistem ditutup secara automatik.");
+                    }
+                    return;
+                }
+                masaBerbaki--;
+                paparanMasa.innerText = formatMasa(masaBerbaki);
+                
+                if (masaBerbaki <= 60) {
+                    paparanMasa.classList.replace('bg-white', 'bg-red-600');
+                    paparanMasa.classList.replace('text-red-600', 'text-white');
+                    paparanMasa.classList.add('animate-pulse');
+                }
+            }, 1000);
+        }
+
+        document.getElementById('borang-ujian').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if(config.platform === 'gsheets') {
+                if(confirm("Pasti mahu hantar sekarang?")) hantarBorang();
+            }
+        });
+
+        function hantarBorang() {
+            if(ujianTamat) return;
+            ujianTamat = true;
+            clearInterval(timerInterval);
+            localStorage.removeItem(storageKey); // Padam memori selepas berjaya hantar
+            
+            const borang = document.getElementById('borang-ujian');
+            
+            document.getElementById('skrinUjian').classList.add('hidden');
+            const skrinStatus = document.getElementById('skrinStatus');
+            skrinStatus.classList.remove('hidden');
+            skrinStatus.classList.add('flex');
+            document.getElementById('statusLoading').classList.remove('hidden');
+            
+            const formData = new FormData(borang);
+            const urlEncodedData = new URLSearchParams(formData);
+
+            if (config.urlSheets && config.urlSheets.startsWith("http")) {
+                fetch(config.urlSheets, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: urlEncodedData.toString()
+                }).then(() => paparKejayaan("Jawapan anda berjaya direkodkan ke pangkalan data peperiksaan."))
+                  .catch(err => { alert("Ralat Rangkaian."); paparKejayaan("Berlaku ralat rangkaian, namun sesi ditamatkan."); });
+            } else {
+                setTimeout(() => paparKejayaan("Jawapan anda berjaya direkodkan ke pangkalan data peperiksaan."), 1500);
+            }
+        }
+
+        function paparKejayaan(mesejUbahsuai = null) {
+            const skrinStatus = document.getElementById('skrinStatus');
+            skrinStatus.classList.remove('hidden');
+            skrinStatus.classList.add('flex');
+            
+            document.getElementById('statusLoading').classList.add('hidden');
+            document.getElementById('statusBerjaya').classList.remove('hidden');
+            
+            if(mesejUbahsuai) { document.getElementById('mesejTamat').innerText = mesejUbahsuai; }
+            
+            const divLaporan = document.getElementById('laporanPenipuan');
+            if(cheatCount > 0) {
+                divLaporan.innerHTML = `
+                    <div class="bg-red-100 text-red-800 p-4 font-bold text-xl uppercase rounded shadow-inner">
+                        <span class="text-3xl block mb-2">⚠️ ${cheatCount} AMARAN DIREKODKAN</span>
+                        Sistem merekodkan anda cuba menipu / bertukar skrin. ${config.platform === 'gsheets' ? 'Rekod ini telah dihantar ke pangkalan data pemeriksa.' : 'Sila pastikan anda tidak mengulanginya.'}
+                    </div>
+                `;
+                divLaporan.classList.add('bg-red-50', 'border-red-400');
+            } else {
+                divLaporan.innerHTML = `
+                    <div class="bg-green-100 text-green-800 p-4 font-bold text-lg rounded shadow-inner">
+                        Tahniah! Tiada sebarang percubaan menipu dikesan sepanjang ujian.
+                    </div>
+                `;
+                divLaporan.classList.add('bg-green-50', 'border-green-400');
+            }
+        }
+    </script>
+</body>
+</html>
