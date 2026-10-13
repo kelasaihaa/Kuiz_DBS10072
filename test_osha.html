@@ -1503,6 +1503,77 @@
                 else if (e.key === 'Enter' && !document.getElementById('submit-btn').disabled) submitAnswer();
             });
         };
+
+        // ================= AUTO-DISABLE LATIHAN INTERAKTIF (11:30 PAGI) =================
+        window.FORCE_DISABLED_LATIHAN = false;
+        window.lecturerUnlockedLatihan = false;
+
+        function isLatihanPastCutoff() {
+            if (window.lecturerUnlockedLatihan) return false;
+            if (window.FORCE_DISABLED_LATIHAN) return true;
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'Asia/Kuala_Lumpur',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hour12: false
+                }).formatToParts(new Date());
+                const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
+                const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
+                return (h > 11) || (h === 11 && m >= 30);
+            } catch (e) {
+                const now = new Date();
+                return (now.getHours() > 11) || (now.getHours() === 11 && now.getMinutes() >= 30);
+            }
+        }
+
+        function enforceLatihanCutoff() {
+            if (!isLatihanPastCutoff()) return;
+            try { if (typeof timer !== 'undefined' && timer) clearInterval(timer); } catch (e) {}
+            const appEl = document.getElementById('app');
+            if (appEl) appEl.classList.add('hidden');
+            const fbEl = document.getElementById('feedback-modal');
+            if (fbEl) fbEl.classList.add('hidden');
+
+            let ov = document.getElementById('latihan-disabled-overlay');
+            if (!ov) {
+                ov = document.createElement('div');
+                ov.id = 'latihan-disabled-overlay';
+                ov.className = 'fixed inset-0 z-[55] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl';
+                ov.innerHTML = `
+                    <div class="glass-card max-w-md w-full rounded-3xl p-8 text-center shadow-2xl border border-rose-500/30">
+                        <div class="inline-flex p-4 bg-rose-500/20 rounded-2xl mb-4 border border-rose-400/30">
+                            <i class="fa-solid fa-lock text-4xl text-rose-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white mb-2">Latihan Interaktif Ditutup</h2>
+                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
+                            Sesi Latihan Interaktif telah ditutup bermula jam <b>11:30 pagi</b> bagi memberi laluan kepada sesi ujian rasmi.
+                        </p>
+                        <button onclick="unlockLatihanForLecturer()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 rounded-xl border border-slate-600/50 flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-user-shield"></i>
+                            <span>Akses Pensyarah (PIN)</span>
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(ov);
+            } else {
+                ov.classList.remove('hidden');
+            }
+        }
+
+        function unlockLatihanForLecturer() {
+            openPin(() => {
+                window.lecturerUnlockedLatihan = true;
+                const ov = document.getElementById('latihan-disabled-overlay');
+                if (ov) ov.classList.add('hidden');
+                const appEl = document.getElementById('app');
+                if (appEl) appEl.classList.remove('hidden');
+                openDashboard();
+            });
+        }
+
+        enforceLatihanCutoff();
+        setInterval(enforceLatihanCutoff, 1000);
     </script>
 </body>
 </html>
